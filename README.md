@@ -7,6 +7,8 @@ It can also be used directly from docker `docker run -P akhenakh/regionagogo`
 ## Data
 It uses data from [Natural Earth Data](http://www.naturalearthdata.com/) and performs real points inside tests against geo shapes.
 
+Some regions are precise and some accentuated names are wrong, if you are aware of a better source please tell me.
+
 ## Build & Install
 ```
 make

@@ -10,6 +10,7 @@ RUN go get github.com/akhenakh/regionagogo
 RUN go get github.com/jteeuwen/go-bindata/...
 RUN cd /go/src/github.com/akhenakh/regionagogo && make
 RUN go install github.com/akhenakh/regionagogo/...
+RUN cd /go/src/github.com/akhenakh/regionagogo && make clean
 
 # Run the outyet command by default when the container starts.
 ENTRYPOINT /go/bin/regionagogo
