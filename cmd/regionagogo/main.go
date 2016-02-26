@@ -14,10 +14,6 @@ type Server struct {
 	*regionagogo.GeoSearch
 }
 
-type Response struct {
-	Country string
-}
-
 // countryHandler takes a lat & lng query params and return a JSON
 // with the country of the coordinate
 func (s *Server) countryHandler(w http.ResponseWriter, r *http.Request) {
@@ -35,16 +31,16 @@ func (s *Server) countryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	country := s.Query(lat, lng)
+	region := s.Query(lat, lng)
 	w.Header().Set("Content-Type", "application/json")
 
-	if country == nil {
-		js, _ := json.Marshal(Response{Country: "unkwown"})
+	if region == nil {
+		js, _ := json.Marshal(regionagogo.Region{Code: "unknown", Name: "unknown"})
 		w.Write(js)
 		return
 	}
 
-	js, _ := json.Marshal(Response{Country: *country})
+	js, _ := json.Marshal(region)
 	w.Write(js)
 }
 

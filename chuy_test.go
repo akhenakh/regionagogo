@@ -9,22 +9,24 @@ import (
 )
 
 var cities = []struct {
-	c       []float64
-	country string
-	name    string
+	c    []float64
+	code string
+	name string
 }{
-	{[]float64{47.339608, -3.164062}, "FR", "Le Palais"},
-	{[]float64{47.204059, -1.549072}, "FR", "Nantes"},
-	{[]float64{48.857205, 2.345581}, "FR", "Paris"},
-	{[]float64{37.935757, -122.347748}, "US", "Richmond, CA"},
-	{[]float64{19.542915, -155.665857}, "US", "Hawai"},
+	{[]float64{47.339608, -3.164062}, "FR", "Bretagne"},         // Le Palais
+	{[]float64{47.204059, -1.549072}, "FR", "Pays de la Loire"}, // Nantes
+	{[]float64{48.857205, 2.345581}, "FR", "le-de-France"},      // Paris
+	{[]float64{37.935757, -122.347748}, "US", "California"},     // Richmond, CA
+	{[]float64{19.542915, -155.665857}, "US", "Hawaii"},
 	{[]float64{42.088032, 8.876953}, "FR", "Corse"},
-	{[]float64{-22.009467, 166.403046}, "NC", "Noumea"},
-	{[]float64{40.642094, 9.140625}, "IT", "Sardaigne"},
-	{[]float64{39.578967, 3.098145}, "ES", "Palma"},
-	{[]float64{18.13378, -66.63208}, "PR", "Puerto Rico"},
-	{[]float64{16.087218, -61.66626}, "FR", "Guadeloupe"},
-	{[]float64{46.418926, 43.769531}, "RU", "Somewhere in Russia"},
+	{[]float64{-22.009467, 166.403046}, "NC", "Sud"}, // Noumea
+	{[]float64{40.642094, 9.140625}, "IT", "Sardegna"},
+	{[]float64{39.578967, 3.098145}, "ES", "Islas Baleares"}, // Palma
+	{[]float64{18.13378, -66.63208}, "PR", "PRI-00 (Puerto Rico aggregation)"},
+	{[]float64{16.087218, -61.66626}, "FR", "GLP-00 (Guadeloupe aggregation)"},
+	{[]float64{46.418926, 43.769531}, "RU", "Rostov"},
+	{[]float64{41.976689, -114.076538}, "US", "Nevada"}, // Nevada corner
+	{[]float64{46.819651, -71.255951}, "CA", "Qubec"},   // Quebec city, source data destroyed accents
 }
 
 // belle ile region
@@ -97,9 +99,12 @@ func TestCities(t *testing.T) {
 	}
 
 	for _, city := range cities {
-		out := gs.Query(city.c[0], city.c[1])
-		if out == nil || *out != city.country {
-			t.Fatal(city.name, "should be", city.country, "got", *out)
+		region := gs.Query(city.c[0], city.c[1])
+		if region == nil || region.Code != city.code {
+			t.Fatal(city.c, "should be", city.code, "got", region.Code)
+		}
+		if region.Name != city.name {
+			t.Fatal(city.c, "should be", city.name, "got", region.Name)
 		}
 	}
 

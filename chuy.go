@@ -23,8 +23,9 @@ type GeoSearch struct {
 
 // Region is region for memory use
 type Region struct {
-	Name string
-	L    *s2.Loop
+	Code string   `json:"code"`
+	Name string   `json:"name"`
+	L    *s2.Loop `json:"-"`
 }
 
 // GeoData is used to pack the data in a msgpack file
@@ -42,6 +43,7 @@ type CellIDLoopStorage struct {
 // RegionStorage is a region representation for storage use
 type RegionStorage struct {
 	Name         string   `msgpack:"n"`
+	Code         string   `msgpack:"i"`
 	Points       []CPoint `msgpack:"p"`
 	s2.CellUnion `msgpack:"c"`
 }
@@ -83,7 +85,7 @@ func (gs *GeoSearch) ImportGeoData(b []byte) error {
 
 		// load the loops into memory
 		l := s2.LoopFromPoints(points)
-		gs.rm[loopID] = Region{Name: r.Name, L: l}
+		gs.rm[loopID] = Region{Code: r.Code, Name: r.Name, L: l}
 	}
 
 	// load the cell ranges into the tree
@@ -97,7 +99,7 @@ func (gs *GeoSearch) ImportGeoData(b []byte) error {
 }
 
 // Query returns the country for the corresponding lat, lng point
-func (gs *GeoSearch) Query(lat, lng float64) *string {
+func (gs *GeoSearch) Query(lat, lng float64) *Region {
 	q := s2.CellIDFromLatLng(s2.LatLngFromDegrees(lat, lng))
 	i := &S2Interval{CellID: q}
 	r := gs.Tree.Query(i)
@@ -109,8 +111,8 @@ func (gs *GeoSearch) Query(lat, lng float64) *string {
 
 		for _, loopID := range sitv.LoopIDs {
 			if gs.rm[loopID].L.ContainsPoint(q.Point()) {
-				name := gs.rm[loopID].Name
-				return &name
+				region := gs.rm[loopID]
+				return &region
 			}
 		}
 	}
@@ -189,12 +191,23 @@ func ImportGeoJSONFile(filename string, debug bool) error {
 				}
 				code := f.Properties["iso_a2"].(string)
 
+				region := ""
+				if _, ok := f.Properties["name"].(string); !ok {
+					if _, ok := f.Properties["region"].(string); ok {
+						region = f.Properties["region"].(string)
+					}
+
+				} else {
+					region = f.Properties["name"].(string)
+				}
+
 				if debug {
 					fmt.Println("import", loopID, code, f.Properties["name"])
 				}
 
 				r := RegionStorage{
-					Name:      code,
+					Name:      region,
+					Code:      code,
 					Points:    cpoints,
 					CellUnion: covering,
 				}
