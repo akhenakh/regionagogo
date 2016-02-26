@@ -21,7 +21,11 @@ Run `regionagogo`, it will listen on port `8082`.
 You can query via HTTP GET:
 
 ```
-GET /country?lat=48.864716&lng=2.349014
+GET /country?lat=19.542915&lng=-155.665857
 
-{ "Country": "FR" }
+{
+    "code": "US",
+    "name": "Hawaii"
+}
+
 ```
