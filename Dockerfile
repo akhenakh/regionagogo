@@ -12,7 +12,7 @@ RUN cd /go/src/github.com/akhenakh/regionagogo && make
 RUN go install github.com/akhenakh/regionagogo/...
 RUN cd /go/src/github.com/akhenakh/regionagogo && make clean
 
-# Run the outyet command by default when the container starts.
+USER nobody
 ENTRYPOINT /go/bin/regionagogo
 
 EXPOSE 8082
