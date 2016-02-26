@@ -11,6 +11,9 @@ Some regions are not precise enough and some accentuated names are wrong, if you
 
 ## Build & Install
 ```
+go get github.com/jteeuwen/go-bindata/...
+go get github.com/akhenakh/regionagogo
+cd $GOPATH/src/github.com/akhenakh/regionagogo
 make
 go install github.com/akhenakh/regionagogo/cmd/regionagogo
 ```
