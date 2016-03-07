@@ -154,27 +154,34 @@ func ImportGeoJSONFile(filename string, debug bool) error {
 				// polygon
 				var points []s2.Point
 				var cpoints []CPoint
+				// For type "MultiPolygon", the "coordinates" member must be an array of Polygon coordinate arrays.
+				// "Polygon", the "coordinates" member must be an array of LinearRing coordinate arrays.
+				// For Polygons with multiple rings, the first must be the exterior ring and any others must be interior rings or holes.
 
-				for _, p := range m {
-					// coordinates
-
-					// reverse the slice
-					for i := len(p)/2 - 1; i >= 0; i-- {
-						opp := len(p) - 1 - i
-						p[i], p[opp] = p[opp], p[i]
-					}
-
-					for i, c := range p {
-						ll := s2.LatLngFromDegrees(float64(c[1]), float64(c[0]))
-						point := s2.PointFromLatLng(ll)
-						points = append(points, point)
-						// do not add cpoint on storage (first point is last point)
-						if i == len(p)-1 {
-							break
-						}
-						cpoints = append(cpoints, CPoint{Coordinate: []float64{float64(c[1]), float64(c[0])}})
-					}
+				if len(m) < 1 {
+					continue
 				}
+
+				p := m[0]
+				// coordinates
+
+				// reverse the slice
+				for i := len(p)/2 - 1; i >= 0; i-- {
+					opp := len(p) - 1 - i
+					p[i], p[opp] = p[opp], p[i]
+				}
+
+				for i, c := range p {
+					ll := s2.LatLngFromDegrees(float64(c[1]), float64(c[0]))
+					point := s2.PointFromLatLng(ll)
+					points = append(points, point)
+					// do not add cpoint on storage (first point is last point)
+					if i == len(p)-1 {
+						break
+					}
+					cpoints = append(cpoints, CPoint{Coordinate: []float64{float64(c[1]), float64(c[0])}})
+				}
+
 				l := s2.LoopFromPoints(points)
 
 				if l.IsEmpty() || l.IsFull() {
