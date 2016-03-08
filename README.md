@@ -39,3 +39,13 @@ GET /country?lat=19.542915&lng=-155.665857
 }
 
 ```
+
+## Using it as a library
+You can use it in your own code without the HTTP interface:  
+
+```
+gs := regionagogo.NewGeoSearch()
+b, _ := ioutil.ReadFile("geodata")
+gs.ImportGeoData(b)
+r := gs.Query(msg.Latitude, msg.Longitude)
+```
