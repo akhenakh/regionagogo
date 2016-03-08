@@ -4,8 +4,6 @@ import (
 	"io/ioutil"
 	"log"
 	"testing"
-
-	"github.com/golang/geo/s2"
 )
 
 var cities = []struct {
@@ -27,6 +25,9 @@ var cities = []struct {
 	{[]float64{46.418926, 43.769531}, "RU", "Rostov"},
 	{[]float64{41.976689, -114.076538}, "US", "Nevada"}, // Nevada corner
 	{[]float64{46.819651, -71.255951}, "CA", "Qubec"},   // Quebec city, source data destroyed accents
+	{[]float64{-23.954352, -46.367455}, "BR", "So Paulo"},
+	{[]float64{-23.84353, -45.341949}, "BR", "So Paulo"},
+	{[]float64{41.059757, 45.012906}, "AZ", "Qazax"},
 }
 
 // belle ile region
@@ -81,6 +82,7 @@ func TestCities(t *testing.T) {
 	}
 
 	gs := NewGeoSearch()
+	gs.Debug = true
 
 	b, err := ioutil.ReadFile("bindata/geodata")
 	if err != nil {
@@ -90,12 +92,6 @@ func TestCities(t *testing.T) {
 	err = gs.ImportGeoData(b)
 	if err != nil {
 		log.Fatal("import data failed", err)
-	}
-
-	ll := s2.LatLngFromDegrees(47.339608, -3.164062)
-	p := s2.PointFromLatLng(ll)
-	if !gs.rm[2316].L.ContainsPoint(p) {
-		log.Fatal("imported data failed")
 	}
 
 	for _, city := range cities {

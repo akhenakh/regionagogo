@@ -75,6 +75,7 @@ func (gs *GeoSearch) ImportGeoData(b []byte) error {
 
 	for loopID, r := range gd.RS {
 		var points []s2.Point
+
 		for _, c := range r.Points {
 			ll := s2.LatLngFromDegrees(c.Coordinate[0], c.Coordinate[1])
 			point := s2.PointFromLatLng(ll)
@@ -86,12 +87,16 @@ func (gs *GeoSearch) ImportGeoData(b []byte) error {
 		// load the loops into memory
 		l := s2.LoopFromPoints(points)
 		gs.rm[loopID] = Region{Code: r.Code, Name: r.Name, L: l}
+
 	}
 
 	// load the cell ranges into the tree
 	for _, cLoop := range gd.CL {
 		gs.Add(&S2Interval{CellID: cLoop.C, LoopIDs: cLoop.Loops})
 	}
+
+	// free some space
+	gd.CL = []CellIDLoopStorage{}
 
 	log.Println("loaded", len(gs.rm), "regions")
 
@@ -103,18 +108,41 @@ func (gs *GeoSearch) Query(lat, lng float64) *Region {
 	q := s2.CellIDFromLatLng(s2.LatLngFromDegrees(lat, lng))
 	i := &S2Interval{CellID: q}
 	r := gs.Tree.Query(i)
+
+	matchLoopID := -1
+
 	for _, itv := range r {
 		sitv := itv.(*S2Interval)
 		if gs.Debug {
 			fmt.Println("found", sitv, sitv.LoopIDs)
 		}
 
+		// a region can include a smaller region
+		// return only the one that is contained in the other
+
 		for _, loopID := range sitv.LoopIDs {
+
 			if gs.rm[loopID].L.ContainsPoint(q.Point()) {
-				region := gs.rm[loopID]
-				return &region
+
+				if matchLoopID == -1 {
+					matchLoopID = loopID
+				} else {
+					foundLoop := gs.rm[loopID].L
+					previousLoop := gs.rm[matchLoopID].L
+
+					// we take the 1st vertex of the foundloop if it is contained in previousLoop
+					// foundLoop one is more precise
+					if previousLoop.ContainsPoint(foundLoop.Vertex(0)) {
+						matchLoopID = loopID
+					}
+				}
 			}
 		}
+	}
+
+	if matchLoopID != -1 {
+		region := gs.rm[matchLoopID]
+		return &region
 	}
 
 	return nil
