@@ -2,6 +2,13 @@ all: build
 
 build: test 
 	 go build ./...
+	
+builddocker:
+	mkdir -p bindata
+	go-bindata -nomemcopy ./bindata
+	mv bindata.go cmd/regionagogo
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o regionagogo.linux ./cmd/regionagogo 
+	docker build -t akhenakh/regionagogo  -f  ./Dockerfile  .
 
 test: generatebindata 
 	go test -v ./...
@@ -25,4 +32,5 @@ clean:
 	rm -f cmd/regionagogo/bindata.go
 	rm -f cmd/regionagogo/regionagogo
 	rm -f cmd/gendata/geodata
+	rm -f regionagogo.linux
 
