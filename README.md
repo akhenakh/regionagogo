@@ -9,6 +9,11 @@ It uses data from [Natural Earth Data](http://www.naturalearthdata.com/) and per
 
 Some regions are not precise enough and some accentuated names are wrong, if you are aware of a better source please tell me.
 
+The actual Go S2 implementation does not use the shape boundaries to perform a region coverage but a rect boundaries.
+regionagogo is reading a file named geodata in msgpack format so you can generate the datafile with another S2 implementation, you can use my C++/ObjC gluecode: [regionagogogen](https://github.com/akhenakh/regionagogogen).  
+
+The image submitted to Docker hub, will always be an optimized one using the C++ implementation.
+
 ## Build & Install
 ```
 go get github.com/jteeuwen/go-bindata/...
