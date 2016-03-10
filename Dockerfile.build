@@ -17,3 +17,4 @@ USER nobody
 ENTRYPOINT /go/bin/regionagogo
 
 EXPOSE 8082
+EXPOSE 8083

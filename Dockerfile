@@ -7,3 +7,4 @@ USER nobody
 ENTRYPOINT /regionagogo
 
 EXPOSE 8082
+EXPORT 8083
