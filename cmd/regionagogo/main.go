@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"log"
 	"strconv"
 
@@ -13,6 +14,14 @@ import (
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/grpclog"
+)
+
+var (
+	tls      = flag.Bool("tls", false, "Connection uses TLS if true, else plain TCP")
+	certFile = flag.String("cert_file", "testdata/server1.pem", "The TLS cert file")
+	keyFile  = flag.String("key_file", "testdata/server1.key", "The TLS key file")
 )
 
 type Server struct {
@@ -60,6 +69,7 @@ func (s *Server) countryHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	flag.Parse()
 
 	gs := regionagogo.NewGeoSearch()
 
@@ -81,7 +91,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
+
 	var opts []grpc.ServerOption
+	if *tls {
+		creds, err := credentials.NewServerTLSFromFile(*certFile, *keyFile)
+		if err != nil {
+			grpclog.Fatalf("Failed to generate credentials %v", err)
+		}
+		opts = []grpc.ServerOption{grpc.Creds(creds)}
+	}
 
 	grpcServer := grpc.NewServer(opts...)
 	pb.RegisterRegionAGogoServer(grpcServer, s)
