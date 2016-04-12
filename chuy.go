@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"strings"
 
 	"gopkg.in/vmihailenco/msgpack.v2"
 
@@ -23,9 +24,8 @@ type GeoSearch struct {
 
 // Region is region for memory use
 type Region struct {
-	Code string   `json:"code"`
-	Name string   `json:"name"`
-	L    *s2.Loop `json:"-"`
+	Data map[string]string `json:"data"`
+	L    *s2.Loop          `json:"-"`
 }
 
 // GeoData is used to pack the data in a msgpack file
@@ -42,9 +42,9 @@ type CellIDLoopStorage struct {
 
 // RegionStorage is a region representation for storage use
 type RegionStorage struct {
-	Name         string   `msgpack:"n"`
-	Code         string   `msgpack:"i"`
-	Points       []CPoint `msgpack:"p"`
+	Data         map[string]string `msgpack:"d"`
+	Code         string            `msgpack:"i"`
+	Points       []CPoint          `msgpack:"p"`
 	s2.CellUnion `msgpack:"c"`
 }
 
@@ -86,7 +86,7 @@ func (gs *GeoSearch) ImportGeoData(b []byte) error {
 
 		// load the loops into memory
 		l := s2.LoopFromPoints(points)
-		gs.rm[loopID] = Region{Code: r.Code, Name: r.Name, L: l}
+		gs.rm[loopID] = Region{Data: r.Data, L: l}
 
 	}
 
@@ -104,7 +104,7 @@ func (gs *GeoSearch) ImportGeoData(b []byte) error {
 }
 
 // Query returns the country for the corresponding lat, lng point
-func (gs *GeoSearch) Query(lat, lng float64) *Region {
+func (gs *GeoSearch) Query(lat, lng float64) map[string]string {
 	q := s2.CellIDFromLatLng(s2.LatLngFromDegrees(lat, lng))
 	i := &S2Interval{CellID: q}
 	r := gs.Tree.Query(i)
@@ -142,7 +142,7 @@ func (gs *GeoSearch) Query(lat, lng float64) *Region {
 
 	if matchLoopID != -1 {
 		region := gs.rm[matchLoopID]
-		return &region
+		return region.Data
 	}
 
 	return nil
@@ -150,7 +150,8 @@ func (gs *GeoSearch) Query(lat, lng float64) *Region {
 
 // importGeoJSONFile will load a geo json and save the polygons into
 // a msgpack file named geodata
-func ImportGeoJSONFile(filename string, debug bool) error {
+// fields to lookup for in GeoJSON
+func ImportGeoJSONFile(filename string, debug bool, fields []string) error {
 	var loopID int
 
 	b, err := ioutil.ReadFile(filename)
@@ -221,28 +222,21 @@ func ImportGeoJSONFile(filename string, debug bool) error {
 				rc := &s2.RegionCoverer{MinLevel: 1, MaxLevel: 30, MaxCells: 8}
 				covering := rc.Covering(rb)
 
-				if _, ok := f.Properties["iso_a2"].(string); !ok {
-					log.Fatal("can't find country code", f.Properties)
-				}
-				code := f.Properties["iso_a2"].(string)
-
-				region := ""
-				if _, ok := f.Properties["name"].(string); !ok {
-					if _, ok := f.Properties["region"].(string); ok {
-						region = f.Properties["region"].(string)
+				data := make(map[string]string)
+				for _, field := range fields {
+					if v, ok := f.Properties[field].(string); !ok {
+						log.Println("can't find field on", f.Properties)
+					} else {
+						data[field] = v
 					}
-
-				} else {
-					region = f.Properties["name"].(string)
 				}
 
 				if debug {
-					fmt.Println("import", loopID, code, f.Properties["name"])
+					fmt.Println("import", loopID, data)
 				}
 
 				r := RegionStorage{
-					Name:      region,
-					Code:      code,
+					Data:      data,
 					Points:    cpoints,
 					CellUnion: covering,
 				}
@@ -276,5 +270,23 @@ func ImportGeoJSONFile(filename string, debug bool) error {
 		return err
 	}
 
+	return nil
+}
+
+// FieldFlag reusable parse Value to create import command
+type FieldFlag struct {
+	Fields []string
+}
+
+func (ff *FieldFlag) String() string {
+	return fmt.Sprint(ff.Fields)
+}
+
+func (ff *FieldFlag) Set(value string) error {
+	if len(ff.Fields) > 0 {
+		return fmt.Errorf("The field flag is already set")
+	}
+
+	ff.Fields = strings.Split(value, ",")
 	return nil
 }

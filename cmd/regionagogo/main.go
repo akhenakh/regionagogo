@@ -31,16 +31,16 @@ func (s *Server) countryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	region := s.Query(lat, lng)
+	data := s.Query(lat, lng)
 	w.Header().Set("Content-Type", "application/json")
 
-	if region == nil {
-		js, _ := json.Marshal(regionagogo.Region{Code: "unknown", Name: "unknown"})
+	if len(data) == 0 {
+		js, _ := json.Marshal(map[string]string{"name": "unknown"})
 		w.Write(js)
 		return
 	}
 
-	js, _ := json.Marshal(region)
+	js, _ := json.Marshal(data)
 	w.Write(js)
 }
 
