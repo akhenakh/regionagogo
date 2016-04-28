@@ -96,11 +96,11 @@ func TestCities(t *testing.T) {
 
 	for _, city := range cities {
 		region := gs.Query(city.c[0], city.c[1])
-		if region == nil || region.Code != city.code {
-			t.Fatal(city.c, "should be", city.code, "got", region.Code)
+		if region == nil || region["iso_a2"] != city.code {
+			t.Fatal(city.c, "should be", city.code, "got", region["iso_a2"])
 		}
-		if region.Name != city.name {
-			t.Fatal(city.c, "should be", city.name, "got", region.Name)
+		if region["name"] != city.name {
+			t.Fatal(city.c, "should be", city.name, "got", region["name"])
 		}
 	}
 

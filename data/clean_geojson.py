@@ -14,8 +14,10 @@ for feature in data["features"]:
         d["iso_a2"] = prop["iso_a2"]
     if prop["region"]:
         d["region"] = prop["region"]
+    if "name" not in prop:
+        d["name"] = prop["region"]
 
-    features.append({"type": "feature", "geometry": feature["geometry"], "properties": prop})
+    features.append({"type": "feature", "geometry": feature["geometry"], "properties": d})
 data["features"] = features
 
 print json.dumps(data, separators=(',',':'))

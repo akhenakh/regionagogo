@@ -19,7 +19,7 @@ gendata:
 
 generategeodata: gendata
 	mkdir -p bindata
-	./bin/gendata  -filename data/world_states_10m.geojson 
+	./bin/gendata  -filename data/world_states_10m.geojson -fields iso_a2,name
 	mv geodata bindata 
 
 generatebindata: generategeodata 
