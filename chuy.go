@@ -175,6 +175,8 @@ func ImportGeoJSONFile(filename string, debug bool, fields []string) error {
 			return err
 		}
 
+		rc := &s2.RegionCoverer{MinLevel: 1, MaxLevel: 30, MaxCells: 8}
+
 		switch geom.GetType() {
 		case "Polygon":
 			mp := geom.(*geojson.Polygon)
@@ -205,16 +207,14 @@ func ImportGeoJSONFile(filename string, debug bool, fields []string) error {
 					cpoints = append(cpoints, CPoint{Coordinate: []float64{float64(c[1]), float64(c[0])}})
 				}
 
-				l := s2.LoopFromPoints(points)
+				l := LoopRegionFromPoints(points)
 
 				if l.IsEmpty() || l.IsFull() {
 					log.Println("invalid loop")
 					continue
 				}
 
-				rb := l.RectBound()
-				rc := &s2.RegionCoverer{MinLevel: 1, MaxLevel: 30, MaxCells: 8}
-				covering := rc.Covering(rb)
+				covering := rc.Covering(l)
 
 				data := make(map[string]string)
 				for _, field := range fields {
@@ -280,16 +280,14 @@ func ImportGeoJSONFile(filename string, debug bool, fields []string) error {
 					cpoints = append(cpoints, CPoint{Coordinate: []float64{float64(c[1]), float64(c[0])}})
 				}
 
-				l := s2.LoopFromPoints(points)
+				l := LoopRegionFromPoints(points)
 
 				if l.IsEmpty() || l.IsFull() {
 					log.Println("invalid loop")
 					continue
 				}
 
-				rb := l.RectBound()
-				rc := &s2.RegionCoverer{MinLevel: 1, MaxLevel: 30, MaxCells: 8}
-				covering := rc.Covering(rb)
+				covering := rc.Covering(l)
 
 				data := make(map[string]string)
 				for _, field := range fields {
