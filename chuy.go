@@ -176,6 +176,75 @@ func ImportGeoJSONFile(filename string, debug bool, fields []string) error {
 		}
 
 		switch geom.GetType() {
+		case "Polygon":
+			mp := geom.(*geojson.Polygon)
+			// multipolygon
+			for _, p := range mp.Coordinates {
+				// polygon
+				var points []s2.Point
+				var cpoints []CPoint
+				// For type "MultiPolygon", the "coordinates" member must be an array of Polygon coordinate arrays.
+				// "Polygon", the "coordinates" member must be an array of LinearRing coordinate arrays.
+				// For Polygons with multiple rings, the first must be the exterior ring and any others must be interior rings or holes.
+
+
+				// reverse the slice
+				for i := len(p)/2 - 1; i >= 0; i-- {
+					opp := len(p) - 1 - i
+					p[i], p[opp] = p[opp], p[i]
+				}
+
+				for i, c := range p {
+					ll := s2.LatLngFromDegrees(float64(c[1]), float64(c[0]))
+					point := s2.PointFromLatLng(ll)
+					points = append(points, point)
+					// do not add cpoint on storage (first point is last point)
+					if i == len(p)-1 {
+						break
+					}
+					cpoints = append(cpoints, CPoint{Coordinate: []float64{float64(c[1]), float64(c[0])}})
+				}
+
+				l := s2.LoopFromPoints(points)
+
+				if l.IsEmpty() || l.IsFull() {
+					log.Println("invalid loop")
+					continue
+				}
+
+				rb := l.RectBound()
+				rc := &s2.RegionCoverer{MinLevel: 1, MaxLevel: 30, MaxCells: 8}
+				covering := rc.Covering(rb)
+
+				data := make(map[string]string)
+				for _, field := range fields {
+					if v, ok := f.Properties[field].(string); !ok {
+						log.Println("can't find field on", f.Properties)
+					} else {
+						data[field] = v
+					}
+				}
+
+				if debug {
+					fmt.Println("import", loopID, data)
+				}
+
+				r := RegionStorage{
+					Data:      data,
+					Points:    cpoints,
+					CellUnion: covering,
+				}
+
+				geoData.RS = append(geoData.RS, r)
+
+				for _, cell := range covering {
+					cl[cell] = append(cl[cell], loopID)
+				}
+
+				loopID = loopID + 1
+			}
+
+
 		case "MultiPolygon":
 			mp := geom.(*geojson.MultiPolygon)
 			// multipolygon
@@ -218,9 +287,9 @@ func ImportGeoJSONFile(filename string, debug bool, fields []string) error {
 					continue
 				}
 
-				//rb := l.RectBound()
+				rb := l.RectBound()
 				rc := &s2.RegionCoverer{MinLevel: 1, MaxLevel: 30, MaxCells: 8}
-				covering := rc.Covering(l)
+				covering := rc.Covering(rb)
 
 				data := make(map[string]string)
 				for _, field := range fields {
