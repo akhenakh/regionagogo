@@ -25,3 +25,10 @@ _testmain.go
 _steps
 _projects
 _builds
+
+bin/
+bindata/
+cmd/regionagogo/bindata.go
+cmd/reagionagogo/regionagogo
+cmd/gendata/geodata
+reagionagogo.linux
