@@ -218,9 +218,9 @@ func ImportGeoJSONFile(filename string, debug bool, fields []string) error {
 					continue
 				}
 
-				//rb := l.RectBound()
+				rb := l.RectBound()
 				rc := &s2.RegionCoverer{MinLevel: 1, MaxLevel: 30, MaxCells: 8}
-				covering := rc.Covering(l)
+				covering := rc.Covering(rb)
 
 				data := make(map[string]string)
 				for _, field := range fields {
