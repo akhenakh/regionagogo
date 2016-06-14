@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"strings"
 
 	"gopkg.in/vmihailenco/msgpack.v2"
 
@@ -244,7 +243,6 @@ func ImportGeoJSONFile(filename string, debug bool, fields []string) error {
 				loopID = loopID + 1
 			}
 
-
 		case "MultiPolygon":
 			mp := geom.(*geojson.MultiPolygon)
 			// multipolygon
@@ -337,23 +335,5 @@ func ImportGeoJSONFile(filename string, debug bool, fields []string) error {
 		return err
 	}
 
-	return nil
-}
-
-// FieldFlag reusable parse Value to create import command
-type FieldFlag struct {
-	Fields []string
-}
-
-func (ff *FieldFlag) String() string {
-	return fmt.Sprint(ff.Fields)
-}
-
-func (ff *FieldFlag) Set(value string) error {
-	if len(ff.Fields) > 0 {
-		return fmt.Errorf("The field flag is already set")
-	}
-
-	ff.Fields = strings.Split(value, ",")
 	return nil
 }

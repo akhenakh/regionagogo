@@ -5,12 +5,11 @@ It uses S2 and a segment tree to create a fast geo shape database, details of im
 It can also be used directly from docker `docker run -P akhenakh/regionagogo`
 
 ## Data
-It uses data from [Natural Earth Data](http://www.naturalearthdata.com/) and performs real points inside tests against geo shapes.
-
+You can use any geo data but default GeoJSON comes from [Natural Earth Data](http://www.naturalearthdata.com/).  
 Some regions are not precise enough and some accentuated names are wrong, if you are aware of a better source please tell me.
 
-The actual Go S2 implementation does not use the shape boundaries to perform a region coverage but a rect boundaries.
-regionagogo is reading a file named geodata in msgpack format so you can generate the datafile with another S2 implementation, you can use my C++/ObjC gluecode: [regionagogogen](https://github.com/akhenakh/regionagogogen).  
+Regionagogo is using a hackish but correct region coverer, the officiel Go S2 implementation does not yet use the shape boundaries to perform a region coverage but a rect boundaries.
+Regionagogo is reading a file named geodata in msgpack format so you can generate the datafile with another S2 implementation, you can use my C++/ObjC gluecode: [regionagogogen](https://github.com/akhenakh/regionagogogen).  
 
 The image submitted to Docker hub, will always be an optimized one using the C++ implementation.
 
