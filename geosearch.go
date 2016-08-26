@@ -94,6 +94,14 @@ func (gs *GeoSearch) ImportGeoData(filename string) error {
 	return nil
 }
 
+// TODO: refactor as Fence ?
+func (gs *GeoSearch) RegionByID(loopID int64) *Region {
+	if l, ok := gs.rm[loopID]; ok {
+		return &l
+	}
+	return nil
+}
+
 // Query returns the country for the corresponding lat, lng point
 func (gs *GeoSearch) StubbingQuery(lat, lng float64) *Region {
 	q := s2.CellIDFromLatLng(s2.LatLngFromDegrees(lat, lng))
@@ -111,12 +119,13 @@ func (gs *GeoSearch) StubbingQuery(lat, lng float64) *Region {
 		// a region can include a smaller region
 		// return only the one that is contained in the other
 		for _, loopID := range sitv.LoopIDs {
-			if gs.rm[loopID].Loop.ContainsPoint(q.Point()) {
+			region := gs.RegionByID(loopID)
+			if region.Loop.ContainsPoint(q.Point()) {
 
 				if matchLoopID == -1 {
 					matchLoopID = loopID
 				} else {
-					foundLoop := gs.rm[loopID].Loop
+					foundLoop := region.Loop
 					previousLoop := gs.rm[matchLoopID].Loop
 
 					// we take the 1st vertex of the foundloop if it is contained in previousLoop
