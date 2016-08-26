@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 
@@ -64,10 +65,11 @@ func NewGeoSearch() *GeoSearch {
 
 // ImportGeoData loads geodata file into a map loopID->Region
 // fills the segment tree for fast lookup
-func (gs *GeoSearch) ImportGeoData(b []byte) error {
+func (gs *GeoSearch) ImportGeoData(data io.Reader) error {
 	var gd GeoData
 
-	err := msgpack.Unmarshal(b, &gd)
+	d := msgpack.NewDecoder(data)
+	err := d.Decode(&gd)
 	if err != nil {
 		return err
 	}
@@ -187,7 +189,6 @@ func ImportGeoJSONFile(filename string, debug bool, fields []string) error {
 				// For type "MultiPolygon", the "coordinates" member must be an array of Polygon coordinate arrays.
 				// "Polygon", the "coordinates" member must be an array of LinearRing coordinate arrays.
 				// For Polygons with multiple rings, the first must be the exterior ring and any others must be interior rings or holes.
-
 
 				// reverse the slice
 				for i := len(p)/2 - 1; i >= 0; i-- {

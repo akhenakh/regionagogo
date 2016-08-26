@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"log"
+	"os"
 	"strconv"
 
 	"net/http"
@@ -48,12 +50,15 @@ func main() {
 
 	gs := regionagogo.NewGeoSearch()
 
-	data, err := Asset("bindata/geodata")
+	fi, err := os.Open("geodata")
+	defer fi.Close()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = gs.ImportGeoData(data)
+	r := bufio.NewReader(fi)
+
+	err = gs.ImportGeoData(r)
 	if err != nil {
 		log.Fatal(err)
 	}

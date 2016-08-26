@@ -1,8 +1,9 @@
 package regionagogo
 
 import (
-	"io/ioutil"
+	"bufio"
 	"log"
+	"os"
 	"testing"
 )
 
@@ -59,12 +60,13 @@ var cpoints = []CPoint{
 func BenchmarkCities(tb *testing.B) {
 	gs := NewGeoSearch()
 
-	b, err := ioutil.ReadFile("bindata/geodata")
+	fi, err := os.Open("bindata/geodata")
+	defer fi.Close()
 	if err != nil {
-		log.Fatal("import data failed", err)
+		log.Fatal(err)
 	}
-
-	err = gs.ImportGeoData(b)
+	r := bufio.NewReader(fi)
+	err = gs.ImportGeoData(r)
 	if err != nil {
 		log.Fatal("import data failed", err)
 	}
@@ -84,12 +86,17 @@ func TestCities(t *testing.T) {
 	gs := NewGeoSearch()
 	gs.Debug = true
 
-	b, err := ioutil.ReadFile("bindata/geodata")
+	fi, err := os.Open("bindata/geodata")
+	defer fi.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+	r := bufio.NewReader(fi)
 	if err != nil {
 		log.Fatal("import data failed", err)
 	}
 
-	err = gs.ImportGeoData(b)
+	err = gs.ImportGeoData(r)
 	if err != nil {
 		log.Fatal("import data failed", err)
 	}
