@@ -4,60 +4,44 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 
-	"gopkg.in/vmihailenco/msgpack.v2"
+	"bufio"
+	"os"
 
 	"github.com/Workiva/go-datastructures/augmentedtree"
 	"github.com/golang/geo/s2"
+	"github.com/golang/protobuf/proto"
 	"github.com/kpawlik/geojson"
 )
 
-// GeoSearch provides in memory storage and query engine for regions lookup
+const (
+	mininumViableLevel = 3 // the minimum cell level we accept
+)
+
+// GeoSearch provides in memory storage and query engine for region lookup
 type GeoSearch struct {
 	augmentedtree.Tree
-	rm    map[int]Region
+	rm    map[int64]Region
 	Debug bool
 }
 
+// Regions a slice of *Region (type used mainly to return one GeoJSON of the regions)
+type Regions []*Region
+
 // Region is region for memory use
+// it contains an S2 loop and the associated metadata
 type Region struct {
 	Data map[string]string `json:"data"`
-	L    *s2.Loop          `json:"-"`
-}
-
-// GeoData is used to pack the data in a msgpack file
-type GeoData struct {
-	RS []RegionStorage     `msgpack:"rs"`
-	CL []CellIDLoopStorage `msgpack:"cl"`
-}
-
-// CellIDLoopStorage is a cell with associated loops used for storage
-type CellIDLoopStorage struct {
-	C     s2.CellID `msgpack:"c"`
-	Loops []int     `msgpack:"l"`
-}
-
-// RegionStorage is a region representation for storage use
-type RegionStorage struct {
-	Data         map[string]string `msgpack:"d"`
-	Code         string            `msgpack:"i"`
-	Points       []CPoint          `msgpack:"p"`
-	s2.CellUnion `msgpack:"c"`
-}
-
-// CPoint is a []float64 used as coordinates
-type CPoint struct {
-	Coordinate []float64 `msgpack:"c"`
+	Loop *s2.Loop          `json:"-"`
 }
 
 // NewGeoSearch
 func NewGeoSearch() *GeoSearch {
 	gs := &GeoSearch{
 		Tree: augmentedtree.New(1),
-		rm:   make(map[int]Region),
+		rm:   make(map[int64]Region),
 	}
 
 	return gs
@@ -65,20 +49,24 @@ func NewGeoSearch() *GeoSearch {
 
 // ImportGeoData loads geodata file into a map loopID->Region
 // fills the segment tree for fast lookup
-func (gs *GeoSearch) ImportGeoData(data io.Reader) error {
-	var gd GeoData
+func (gs *GeoSearch) ImportGeoData(filename string) error {
+	var gd GeoDataStorage
 
-	d := msgpack.NewDecoder(data)
-	err := d.Decode(&gd)
+	b, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return err
 	}
 
-	for loopID, r := range gd.RS {
+	err = proto.Unmarshal(b, &gd)
+	if err != nil {
+		return err
+	}
+
+	for loopID, r := range gd.Rs {
 		var points []s2.Point
 
 		for _, c := range r.Points {
-			ll := s2.LatLngFromDegrees(c.Coordinate[0], c.Coordinate[1])
+			ll := s2.LatLngFromDegrees(float64(c.Lat), float64(c.Lng))
 			point := s2.PointFromLatLng(ll)
 			points = append(points, point)
 		}
@@ -87,30 +75,32 @@ func (gs *GeoSearch) ImportGeoData(data io.Reader) error {
 
 		// load the loops into memory
 		l := s2.LoopFromPoints(points)
-		gs.rm[loopID] = Region{Data: r.Data, L: l}
+		if l.IsEmpty() || l.IsFull() {
+			return errors.New("invalid loop")
+		}
+		gs.rm[int64(loopID)] = Region{Data: r.Data, Loop: l}
 
 	}
 
 	// load the cell ranges into the tree
-	for _, cLoop := range gd.CL {
-		gs.Add(&S2Interval{CellID: cLoop.C, LoopIDs: cLoop.Loops})
+	for _, cLoop := range gd.Cl {
+		gs.Add(&S2Interval{CellID: s2.CellID(cLoop.Cell), LoopIDs: cLoop.Loops})
 	}
 
 	// free some space
-	gd.CL = []CellIDLoopStorage{}
-
+	gd.Cl = nil
 	log.Println("loaded", len(gs.rm), "regions")
 
 	return nil
 }
 
 // Query returns the country for the corresponding lat, lng point
-func (gs *GeoSearch) Query(lat, lng float64) map[string]string {
+func (gs *GeoSearch) StubbingQuery(lat, lng float64) *Region {
 	q := s2.CellIDFromLatLng(s2.LatLngFromDegrees(lat, lng))
 	i := &S2Interval{CellID: q}
 	r := gs.Tree.Query(i)
 
-	matchLoopID := -1
+	matchLoopID := int64(-1)
 
 	for _, itv := range r {
 		sitv := itv.(*S2Interval)
@@ -120,16 +110,14 @@ func (gs *GeoSearch) Query(lat, lng float64) map[string]string {
 
 		// a region can include a smaller region
 		// return only the one that is contained in the other
-
 		for _, loopID := range sitv.LoopIDs {
-
-			if gs.rm[loopID].L.ContainsPoint(q.Point()) {
+			if gs.rm[loopID].Loop.ContainsPoint(q.Point()) {
 
 				if matchLoopID == -1 {
 					matchLoopID = loopID
 				} else {
-					foundLoop := gs.rm[loopID].L
-					previousLoop := gs.rm[matchLoopID].L
+					foundLoop := gs.rm[loopID].Loop
+					previousLoop := gs.rm[matchLoopID].Loop
 
 					// we take the 1st vertex of the foundloop if it is contained in previousLoop
 					// foundLoop one is more precise
@@ -143,7 +131,7 @@ func (gs *GeoSearch) Query(lat, lng float64) map[string]string {
 
 	if matchLoopID != -1 {
 		region := gs.rm[matchLoopID]
-		return region.Data
+		return &region
 	}
 
 	return nil
@@ -153,22 +141,25 @@ func (gs *GeoSearch) Query(lat, lng float64) map[string]string {
 // a msgpack file named geodata
 // fields to lookup for in GeoJSON
 func ImportGeoJSONFile(filename string, debug bool, fields []string) error {
-	var loopID int
+	var loopID int64
 
-	b, err := ioutil.ReadFile(filename)
+	fi, err := os.Open(filename)
+	defer fi.Close()
 	if err != nil {
 		return err
 	}
+
 	var geo geojson.FeatureCollection
+	r := bufio.NewReader(fi)
 
-	err = json.Unmarshal(b, &geo)
-	if err != nil {
+	d := json.NewDecoder(r)
+	if err := d.Decode(&geo); err != nil {
 		return err
 	}
 
-	var geoData GeoData
+	var geoData GeoDataStorage
 
-	cl := make(map[s2.CellID][]int)
+	cl := make(map[s2.CellID][]int64)
 
 	for _, f := range geo.Features {
 		geom, err := f.GetGeometry()
@@ -185,7 +176,7 @@ func ImportGeoJSONFile(filename string, debug bool, fields []string) error {
 			for _, p := range mp.Coordinates {
 				// polygon
 				var points []s2.Point
-				var cpoints []CPoint
+				var cpoints []*CPoint
 				// For type "MultiPolygon", the "coordinates" member must be an array of Polygon coordinate arrays.
 				// "Polygon", the "coordinates" member must be an array of LinearRing coordinate arrays.
 				// For Polygons with multiple rings, the first must be the exterior ring and any others must be interior rings or holes.
@@ -204,7 +195,7 @@ func ImportGeoJSONFile(filename string, debug bool, fields []string) error {
 					if i == len(p)-1 {
 						break
 					}
-					cpoints = append(cpoints, CPoint{Coordinate: []float64{float64(c[1]), float64(c[0])}})
+					cpoints = append(cpoints, &CPoint{Lat: float32(c[1]), Lng: float32(c[0])})
 				}
 
 				l := LoopRegionFromPoints(points)
@@ -225,17 +216,35 @@ func ImportGeoJSONFile(filename string, debug bool, fields []string) error {
 					}
 				}
 
+				cu := make([]uint64, len(covering))
+				var invalidLoop bool
+
+				for i, v := range covering {
+					// added a security there if the level is too high it probably means the polygon is bogus
+					// this to avoid a large cell to cover everything
+					if v.Level() < mininumViableLevel {
+						log.Print("cell level too big", v.Level(), loopID)
+						invalidLoop = true
+					}
+					cu[i] = uint64(v)
+				}
+
+				// do not insert big loop
+				if invalidLoop {
+					break
+				}
+
 				if debug {
 					fmt.Println("import", loopID, data)
 				}
 
-				r := RegionStorage{
+				rs := &RegionStorage{
 					Data:      data,
 					Points:    cpoints,
-					CellUnion: covering,
+					Cellunion: cu,
 				}
 
-				geoData.RS = append(geoData.RS, r)
+				geoData.Rs = append(geoData.Rs, rs)
 
 				for _, cell := range covering {
 					cl[cell] = append(cl[cell], loopID)
@@ -250,7 +259,7 @@ func ImportGeoJSONFile(filename string, debug bool, fields []string) error {
 			for _, m := range mp.Coordinates {
 				// polygon
 				var points []s2.Point
-				var cpoints []CPoint
+				var cpoints []*CPoint
 				// For type "MultiPolygon", the "coordinates" member must be an array of Polygon coordinate arrays.
 				// "Polygon", the "coordinates" member must be an array of LinearRing coordinate arrays.
 				// For Polygons with multiple rings, the first must be the exterior ring and any others must be interior rings or holes.
@@ -276,9 +285,10 @@ func ImportGeoJSONFile(filename string, debug bool, fields []string) error {
 					if i == len(p)-1 {
 						break
 					}
-					cpoints = append(cpoints, CPoint{Coordinate: []float64{float64(c[1]), float64(c[0])}})
+					cpoints = append(cpoints, &CPoint{Lat: float32(c[1]), Lng: float32(c[0])})
 				}
 
+				// TODO: parallelized region cover
 				l := LoopRegionFromPoints(points)
 
 				if l.IsEmpty() || l.IsFull() {
@@ -297,17 +307,35 @@ func ImportGeoJSONFile(filename string, debug bool, fields []string) error {
 					}
 				}
 
+				cu := make([]uint64, len(covering))
+				var invalidLoop bool
+
+				for i, v := range covering {
+					// added a security there if the level is too high it probably means the polygon is bogus
+					// this to avoid a large cell to cover everything
+					if v.Level() < mininumViableLevel {
+						log.Print("cell level too big", v.Level(), loopID)
+						invalidLoop = true
+					}
+					cu[i] = uint64(v)
+				}
+
+				// do not insert big loop
+				if invalidLoop {
+					break
+				}
+
 				if debug {
 					fmt.Println("import", loopID, data)
 				}
 
-				r := RegionStorage{
+				rs := &RegionStorage{
 					Data:      data,
 					Points:    cpoints,
-					CellUnion: covering,
+					Cellunion: cu,
 				}
 
-				geoData.RS = append(geoData.RS, r)
+				geoData.Rs = append(geoData.Rs, rs)
 
 				for _, cell := range covering {
 					cl[cell] = append(cl[cell], loopID)
@@ -322,19 +350,16 @@ func ImportGeoJSONFile(filename string, debug bool, fields []string) error {
 	}
 
 	for k, v := range cl {
-		geoData.CL = append(geoData.CL, CellIDLoopStorage{C: k, Loops: v})
+		geoData.Cl = append(geoData.Cl, &CellIDLoopStorage{Cell: uint64(k), Loops: v})
 	}
 
-	log.Println("imported", filename, len(geoData.RS), "regions")
+	log.Println("imported", filename, len(geoData.Rs), "regions")
 
-	b, err = msgpack.Marshal(geoData)
+	b, err := proto.Marshal(&geoData)
 	if err != nil {
 		return err
 	}
 	err = ioutil.WriteFile("geodata", b, 0644)
-	if err != nil {
-		return err
-	}
 
 	return nil
 }

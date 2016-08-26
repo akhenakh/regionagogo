@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package regionagogo;
+
+// GeoData is used to store (as on disk) geo data
+// it's the root container for the indexes
+message GeoDataStorage {
+    repeated RegionStorage rs = 1;
+    repeated CellIDLoopStorage cl = 2;
+}
+
+// RegionStorage is used to represent a region in storage
+message RegionStorage {
+    map<string, string> data = 1;
+    repeated CPoint points = 2;
+    repeated uint64 cellunion = 3;
+}
+
+// CPoint represent a coordinates lat & lng
+message CPoint {
+    float lat = 1; // we dont need the double extra precision
+    float lng = 2;
+}
+
+// CellIDLoopStorage is used to build the tree index in memory
+message CellIDLoopStorage {
+    uint64 cell = 1;
+    repeated int64 loops = 2;
+}

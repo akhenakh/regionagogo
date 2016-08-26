@@ -1,13 +1,13 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"log"
-	"os"
 	"strconv"
 
 	"net/http"
+
+	"flag"
 
 	"github.com/akhenakh/regionagogo"
 )
@@ -33,32 +33,27 @@ func (s *Server) countryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := s.Query(lat, lng)
+	region := s.StubbingQuery(lat, lng)
 	w.Header().Set("Content-Type", "application/json")
 
-	if len(data) == 0 {
+	if region == nil {
 		js, _ := json.Marshal(map[string]string{"name": "unknown"})
 		w.Write(js)
 		return
 	}
 
-	js, _ := json.Marshal(data)
+	js, _ := json.Marshal(region.Data)
 	w.Write(js)
 }
 
 func main() {
+	filename := flag.String("filename", "", "A geojson file")
+
+	flag.Parse()
 
 	gs := regionagogo.NewGeoSearch()
 
-	fi, err := os.Open("geodata")
-	defer fi.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	r := bufio.NewReader(fi)
-
-	err = gs.ImportGeoData(r)
+	err := gs.ImportGeoData(*filename)
 	if err != nil {
 		log.Fatal(err)
 	}

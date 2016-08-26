@@ -1,15 +1,15 @@
-Region à gogo is a microservice, simply returns the country and states/region for a given location.
+Region à gogo is a microservice, it's a simple database that returns metadata associated to a fence for a given location.
 
 It uses S2 and a segment tree to create a fast geo shape database, details of implementation are described in this [blog post](http://blog.nobugware.com/post/2016/geo_db_s2_region_polygon).
 
 It can also be used directly from docker `docker run -P akhenakh/regionagogo`
 
 ## Data
-You can use any geo data but default GeoJSON comes from [Natural Earth Data](http://www.naturalearthdata.com/).  
+You can use any geo data but the provided GeoJSON comes from [Natural Earth Data](http://www.naturalearthdata.com/).
 Some regions are not precise enough and some accentuated names are wrong, if you are aware of a better source please tell me.
 
 Regionagogo is using a hackish but correct region coverer, the officiel Go S2 implementation does not yet use the shape boundaries to perform a region coverage but a rect boundaries.
-Regionagogo is reading a file named geodata in msgpack format so you can generate the datafile with another S2 implementation, you can use my C++/ObjC gluecode: [regionagogogen](https://github.com/akhenakh/regionagogogen).  
+Regionagogo is reading a file named geodata in protobuf format so you can generate the datafile with another S2 implementation, you can use my C++/ObjC gluecode: [regionagogogen](https://github.com/akhenakh/regionagogogen).
 
 The image submitted to Docker hub, will always be an optimized one using the C++ implementation.
 
