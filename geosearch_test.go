@@ -1,10 +1,13 @@
 package regionagogo
 
 import (
-	"bufio"
+	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 var cities = []struct {
@@ -30,6 +33,8 @@ var cities = []struct {
 	{[]float64{-23.84353, -45.341949}, "BR", "So Paulo"},
 	{[]float64{41.059757, 45.012906}, "AZ", "Qazax"},
 }
+
+var geoJSONIsland = `{"type":"FeatureCollection","features":[{"type":"Feature","properties":{"stroke":"#555555","stroke-width":2,"stroke-opacity":1,"fill":"#555555","fill-opacity":0.5,"name":"Ile d'Orléans"},"geometry":{"type":"MultiPolygon","coordinates":[[[[-71.17218017578125,46.841407127005866],[-71.17218017578125,47.040182144806664],[-70.784912109375,47.040182144806664],[-70.784912109375,46.841407127005866],[-71.17218017578125,46.841407127005866]]]]}}]}`
 
 // belle ile region
 var cpoints = []CPoint{
@@ -57,16 +62,42 @@ var cpoints = []CPoint{
 	CPoint{47.33148834860839, -3.114654101105884},
 }
 
-func BenchmarkCities(tb *testing.B) {
-	gs := NewGeoSearch()
-
-	fi, err := os.Open("bindata/geodata")
-	defer fi.Close()
-	if err != nil {
-		log.Fatal(err)
+func createTempDB(t testing.TB) (string, func()) {
+	tmpfile, err := ioutil.TempFile("", "teststorage")
+	require.NoError(t, err)
+	return tmpfile.Name(), func() {
+		os.Remove(tmpfile.Name())
 	}
-	r := bufio.NewReader(fi)
-	err = gs.ImportGeoData(r)
+}
+
+func TestStorage(t *testing.T) {
+	tmpfile, clean := createTempDB(t)
+	defer clean()
+
+	gs, err := NewGeoSearch(tmpfile)
+	gs.Debug = true
+	defer gs.Close()
+
+	r := strings.NewReader(geoJSONIsland)
+
+	err = gs.ImportGeoJSONFile(r, []string{"name"})
+	require.NoError(t, err)
+
+	region := gs.RegionByID(1)
+	require.NotNil(t, region)
+
+	err = gs.ImportGeoData()
+	require.NoError(t, err)
+
+	region = gs.StubbingQuery(47.01492366313195, -70.842592064976714)
+	require.NotNil(t, region)
+}
+
+func BenchmarkCities(tb *testing.B) {
+	gs, err := NewGeoSearch("geodata")
+	require.NoError(tb, err)
+
+	err = gs.ImportGeoData()
 	if err != nil {
 		log.Fatal("import data failed", err)
 	}
@@ -83,20 +114,11 @@ func TestCities(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 
-	gs := NewGeoSearch()
+	gs, err := NewGeoSearch("geodata")
+	require.NoError(t, err)
 	gs.Debug = true
 
-	fi, err := os.Open("bindata/geodata")
-	defer fi.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
-	r := bufio.NewReader(fi)
-	if err != nil {
-		log.Fatal("import data failed", err)
-	}
-
-	err = gs.ImportGeoData(r)
+	err = gs.ImportGeoData()
 	if err != nil {
 		log.Fatal("import data failed", err)
 	}

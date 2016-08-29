@@ -47,13 +47,18 @@ func (s *Server) countryHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	filename := flag.String("filename", "", "A geojson file")
+	dbpath := flag.String("dbpath", "", "Database path")
+	debug := flag.Bool("debug", false, "Enable debug")
 
 	flag.Parse()
 
-	gs := regionagogo.NewGeoSearch()
+	gs, err := regionagogo.NewGeoSearch(*dbpath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	gs.Debug = *debug
 
-	err := gs.ImportGeoData(*filename)
+	err = gs.ImportGeoData()
 	if err != nil {
 		log.Fatal(err)
 	}

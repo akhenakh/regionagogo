@@ -8,7 +8,7 @@ import (
 // S2Interval is a CellID interval conforms augmentedtree Interval interface
 type S2Interval struct {
 	s2.CellID
-	LoopIDs []int64
+	LoopIDs []uint64
 }
 
 // LowAtDimension returns an integer representing the lower bound

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"log"
@@ -32,7 +33,10 @@ func main() {
 	var ff FieldFlag
 
 	filename := flag.String("filename", "", "A geojson file")
+	dbpath := flag.String("dbpath", "", "Database path")
+
 	debug := flag.Bool("debug", false, "Enable debug")
+
 	flag.Var(&ff, "fields", "List of fields to fetch inside GeoJSON properties")
 	flag.Parse()
 
@@ -45,8 +49,22 @@ func main() {
 		os.Exit(2)
 	}
 
-	err := regionagogo.ImportGeoJSONFile(*filename, *debug, ff.Fields)
+	gs, err := regionagogo.NewGeoSearch(*dbpath)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	fi, err := os.Open(*filename)
+	defer fi.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+	r := bufio.NewReader(fi)
+
+	err = gs.ImportGeoJSONFile(r, ff.Fields)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	gs.Debug = *debug
 }
