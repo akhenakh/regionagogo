@@ -168,12 +168,8 @@ func (gs *GeoSearch) RegionByID(loopID uint64) *Region {
 		b := tx.Bucket([]byte(loopBucket))
 		v := b.Get(itob(loopID))
 
-		// copy []byte value
-		cv := make([]byte, len(v))
-		copy(cv, v)
-
 		var frs RegionStorage
-		err := proto.Unmarshal(cv, &frs)
+		err := proto.Unmarshal(v, &frs)
 		if err != nil {
 			return err
 		}
