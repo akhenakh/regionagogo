@@ -2,12 +2,10 @@ package main
 
 import (
 	"encoding/json"
-	"log"
-	"strconv"
-
-	"net/http"
-
 	"flag"
+	"log"
+	"net/http"
+	"strconv"
 
 	"github.com/akhenakh/regionagogo"
 )
@@ -65,7 +63,6 @@ func main() {
 		log.Fatal(err)
 	}
 	s := &Server{GeoSearch: gs}
-
 	http.HandleFunc("/country", s.countryHandler)
-	http.ListenAndServe(":8082", nil)
+	log.Println(http.ListenAndServe(":8082", nil))
 }
