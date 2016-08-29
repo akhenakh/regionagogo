@@ -32,3 +32,5 @@ cmd/regionagogo/bindata.go
 cmd/reagionagogo/regionagogo
 cmd/gendata/geodata
 reagionagogo.linux
+/cmd/regionagogo/regionagogo
+/cmd/gendata/gendata

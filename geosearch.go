@@ -13,6 +13,7 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/golang/geo/s2"
 	"github.com/golang/protobuf/proto"
+	"github.com/hashicorp/golang-lru"
 	"github.com/kpawlik/geojson"
 )
 
@@ -20,12 +21,14 @@ const (
 	mininumViableLevel = 3 // the minimum cell level we accept
 	loopBucket         = "loop"
 	coverBucket        = "cover"
+	maxCachedEntries   = 400
 )
 
 // GeoSearch provides in memory index and query engine for fences lookup
 type GeoSearch struct {
 	augmentedtree.Tree
 	*bolt.DB
+	cache *lru.Cache
 	Debug bool
 }
 
@@ -50,9 +53,14 @@ func NewGeoSearch(dbpath string) (*GeoSearch, error) {
 		return nil, err
 	}
 
+	cache, err := lru.New(maxCachedEntries)
+	if err != nil {
+		return nil, err
+	}
 	gs := &GeoSearch{
-		Tree: augmentedtree.New(1),
-		DB:   db,
+		Tree:  augmentedtree.New(1),
+		DB:    db,
+		cache: cache,
 	}
 
 	return gs, nil
@@ -128,12 +136,23 @@ func (gs *GeoSearch) ImportGeoData() error {
 
 // TODO: refactor as Fence ?
 func (gs *GeoSearch) RegionByID(loopID uint64) *Region {
+	val, ok := gs.cache.Get(loopID)
+	if ok {
+		r, _ := val.(*Region)
+		return r
+	}
+
 	var rs *RegionStorage
 	err := gs.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(loopBucket))
 		v := b.Get(itob(loopID))
+
+		// copy []byte value
+		cv := make([]byte, len(v))
+		copy(cv, v)
+
 		var frs RegionStorage
-		err := proto.Unmarshal(v, &frs)
+		err := proto.Unmarshal(cv, &frs)
 		if err != nil {
 			return err
 		}
@@ -143,8 +162,11 @@ func (gs *GeoSearch) RegionByID(loopID uint64) *Region {
 	if err != nil {
 		return nil
 	}
-
-	return NewRegionFromStorage(rs)
+	r := NewRegionFromStorage(rs)
+	if r != nil {
+		gs.cache.Add(loopID, r)
+	}
+	return r
 }
 
 // StubbingQuery returns the region for the corresponding lat, lng point
