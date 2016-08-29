@@ -30,7 +30,7 @@ Run `regionagogo -dbpath ./region.db`, it will listen on port `8082`.
 You can query via HTTP GET:
 
 ```
-GET /country?lat=19.542915&lng=-155.665857
+GET /query?lat=19.542915&lng=-155.665857
 
 {
     "code": "US",

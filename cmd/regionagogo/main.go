@@ -14,9 +14,9 @@ type Server struct {
 	*regionagogo.GeoSearch
 }
 
-// countryHandler takes a lat & lng query params and return a JSON
+// queryHandler takes a lat & lng query params and return a JSON
 // with the country of the coordinate
-func (s *Server) countryHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) queryHandler(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	slat := query.Get("lat")
 	lat, err := strconv.ParseFloat(slat, 64)
@@ -64,6 +64,6 @@ func main() {
 		log.Fatal(err)
 	}
 	s := &Server{GeoSearch: gs}
-	http.HandleFunc("/country", s.countryHandler)
+	http.HandleFunc("/query", s.queryHandler)
 	log.Println(http.ListenAndServe(":8082", nil))
 }
