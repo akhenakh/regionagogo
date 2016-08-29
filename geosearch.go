@@ -172,6 +172,39 @@ func (gs *GeoSearch) StubbingQuery(lat, lng float64) *Region {
 	return foundRegion
 }
 
+// RectQuery perform rectangular query ur upper right bl bottom left
+// return a list of loopID
+// Unoptimized use it for debug tools
+func (gs *GeoSearch) RectQuery(urlat, urlng, bllat, bllng float64, limit int) (Regions, error) {
+	rect := s2.RectFromLatLng(s2.LatLngFromDegrees(bllat, bllng))
+	rect = rect.AddPoint(s2.LatLngFromDegrees(urlat, urlng))
+
+	rc := &s2.RegionCoverer{MaxLevel: 30, MaxCells: 1}
+	covering := rc.Covering(rect)
+	if len(covering) != 1 {
+		return nil, errors.New("impossible covering")
+	}
+	i := &S2Interval{CellID: covering[0]}
+	r := gs.Tree.Query(i)
+
+	var regions []*Region
+
+	for _, itv := range r {
+		sitv := itv.(*S2Interval)
+		for _, loopID := range sitv.LoopIDs {
+			region := gs.RegionByID(loopID)
+			// testing the found loop is actually inside the rect
+			// (since we are using only one large cover it may be outside)
+			if rect.Contains(region.Loop.RectBound()) {
+				regions = append(regions, region)
+			}
+		}
+	}
+
+	//TODO: remove possible duplicates
+	return Regions(regions), nil
+}
+
 // importGeoJSONFile will load a geo json and save the polygons into
 // a msgpack file named geodata
 // fields to lookup for in GeoJSON
