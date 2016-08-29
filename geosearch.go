@@ -28,34 +28,6 @@ type GeoSearch struct {
 	Debug bool
 }
 
-// Regions a slice of *Region (type used mainly to return one GeoJSON of the regions)
-type Regions []*Region
-
-// Region is region for memory use
-// it contains an S2 loop and the associated metadata
-type Region struct {
-	Data map[string]string `json:"data"`
-	Loop *s2.Loop          `json:"-"`
-}
-
-func NewRegionFromStorage(rs *RegionStorage) *Region {
-	if rs == nil {
-		return nil
-	}
-
-	points := make([]s2.Point, len(rs.Points))
-	for i, c := range rs.Points {
-		// Points in Storage are lat lng points
-		ll := s2.LatLngFromDegrees(float64(c.Lat), float64(c.Lng))
-		point := s2.PointFromLatLng(ll)
-		points[i] = point
-	}
-
-	l := LoopRegionFromPoints(points)
-
-	return &Region{Data: rs.Data, Loop: l.Loop}
-}
-
 // NewGeoSearch
 func NewGeoSearch(dbpath string) (*GeoSearch, error) {
 	db, err := bolt.Open(dbpath, 0600, nil)
@@ -151,7 +123,6 @@ func (gs *GeoSearch) RegionByID(loopID uint64) *Region {
 		if err != nil {
 			return err
 		}
-		log.Println("DEBUG", itob(loopID), frs)
 		rs = &frs
 		return nil
 	})
@@ -185,7 +156,6 @@ func (gs *GeoSearch) StubbingQuery(lat, lng float64) *Region {
 		for _, loopID := range sitv.LoopIDs {
 			region := gs.RegionByID(loopID)
 			if region != nil && region.Loop.ContainsPoint(q.Point()) {
-				log.Println("testing region", loopID)
 				if foundRegion == nil {
 					foundRegion = region
 					continue
