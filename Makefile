@@ -16,7 +16,7 @@ buildgendata :
 	go build -o bin/gendata  ./cmd/gendata 
 
 generategeodata : buildgendata
-	./bin/gendata  -filename data/world_states_10m.geojson -fields iso_a2,name -dbpath ./regiondb
+	./bin/gendata  -filename testdata/world_states_10m.geojson -fields iso_a2,name -dbpath ./regiondb
 	mv geodata bindata
 
 protos :

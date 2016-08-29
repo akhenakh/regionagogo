@@ -114,9 +114,9 @@ func TestCities(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 
-	gs, err := NewGeoSearch("geodata")
+	gs, err := NewGeoSearch("regiondb")
 	require.NoError(t, err)
-	gs.Debug = true
+	//gs.Debug = true
 
 	err = gs.ImportGeoData()
 	if err != nil {
@@ -124,13 +124,11 @@ func TestCities(t *testing.T) {
 	}
 
 	for _, city := range cities {
+		t.Log("testing for", city)
 		region := gs.StubbingQuery(city.c[0], city.c[1])
-		if region == nil || region.Data["iso_a2"] != city.code {
-			t.Fatal(city.c, "should be", city.code, "got", region.Data["iso_a2"])
-		}
-		if region.Data["name"] != city.name {
-			t.Fatal(city.c, "should be", city.name, "got", region.Data["name"])
-		}
+		require.NotNil(t, region)
+		require.Equal(t, city.code, region.Data["iso_a2"])
+		require.Equal(t, city.name, region.Data["name"])
 	}
 
 }
