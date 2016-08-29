@@ -21,7 +21,6 @@ const (
 	mininumViableLevel = 3 // the minimum cell level we accept
 	loopBucket         = "loop"
 	coverBucket        = "cover"
-	maxCachedEntries   = 400
 )
 
 // GeoSearch provides in memory index and query engine for fences lookup
@@ -32,8 +31,21 @@ type GeoSearch struct {
 	Debug bool
 }
 
+type GeoSearchOption func(*geoSearchOptions)
+
+type geoSearchOptions struct {
+	maxCachedEntries uint
+}
+
+// WithCachedEntries enable an LRU cache default is disabled
+func WithCachedEntries(maxCachedEntries uint) GeoSearchOption {
+	return func(o *geoSearchOptions) {
+		o.maxCachedEntries = maxCachedEntries
+	}
+}
+
 // NewGeoSearch
-func NewGeoSearch(dbpath string) (*GeoSearch, error) {
+func NewGeoSearch(dbpath string, opts ...GeoSearchOption) (*GeoSearch, error) {
 	db, err := bolt.Open(dbpath, 0600, nil)
 	if err != nil {
 		return nil, err
@@ -53,14 +65,23 @@ func NewGeoSearch(dbpath string) (*GeoSearch, error) {
 		return nil, err
 	}
 
-	cache, err := lru.New(maxCachedEntries)
-	if err != nil {
-		return nil, err
+	var geoOpts geoSearchOptions
+
+	for _, opt := range opts {
+		opt(&geoOpts)
 	}
+
 	gs := &GeoSearch{
-		Tree:  augmentedtree.New(1),
-		DB:    db,
-		cache: cache,
+		Tree: augmentedtree.New(1),
+		DB:   db,
+	}
+
+	if geoOpts.maxCachedEntries != 0 {
+		cache, err := lru.New(int(geoOpts.maxCachedEntries))
+		if err != nil {
+			return nil, err
+		}
+		gs.cache = cache
 	}
 
 	return gs, nil
@@ -136,12 +157,12 @@ func (gs *GeoSearch) ImportGeoData() error {
 
 // TODO: refactor as Fence ?
 func (gs *GeoSearch) RegionByID(loopID uint64) *Region {
-	val, ok := gs.cache.Get(loopID)
-	if ok {
-		r, _ := val.(*Region)
-		return r
+	if gs.cache != nil {
+		if val, ok := gs.cache.Get(loopID); ok {
+			r, _ := val.(*Region)
+			return r
+		}
 	}
-
 	var rs *RegionStorage
 	err := gs.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(loopBucket))
@@ -163,7 +184,7 @@ func (gs *GeoSearch) RegionByID(loopID uint64) *Region {
 		return nil
 	}
 	r := NewRegionFromStorage(rs)
-	if r != nil {
+	if gs.cache != nil && r != nil {
 		gs.cache.Add(loopID, r)
 	}
 	return r

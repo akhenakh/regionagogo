@@ -49,10 +49,11 @@ func main() {
 
 	dbpath := flag.String("dbpath", "", "Database path")
 	debug := flag.Bool("debug", false, "Enable debug")
+	cachedEntries := flag.Uint("cachedEntries", 0, "Region Cache size, 0 for disabled")
 
 	flag.Parse()
-
-	gs, err := regionagogo.NewGeoSearch(*dbpath)
+	opts := regionagogo.WithCachedEntries(*cachedEntries)
+	gs, err := regionagogo.NewGeoSearch(*dbpath, opts)
 	if err != nil {
 		log.Fatal(err)
 	}
