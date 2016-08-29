@@ -1,0 +1,45 @@
+hash: 79adfd240a193712535a2f468753e9e4a5a72acdfbc0c0f5c2e0988bf8ad69df
+updated: 2016-08-29T18:23:27.08007024-04:00
+imports:
+- name: github.com/boltdb/bolt
+  version: 583e8937c61f1af6513608ccc75c97b6abdf4ff9
+- name: github.com/golang/geo
+  version: 3a42ea109208469f16baf9e090135dd0e82ece5c
+  subpackages:
+  - r1
+  - r2
+  - r3
+  - s1
+  - s2
+- name: github.com/golang/protobuf
+  version: 1f49d83d9aa00e6ce4fc8258c71cc7786aec968a
+  subpackages:
+  - proto
+- name: github.com/hashicorp/golang-lru
+  version: 0a025b7e63adc15a622f29b0b2c4c3848243bbf6
+  subpackages:
+  - simplelru
+- name: github.com/kpawlik/geojson
+  version: 03fc5b389cd1027cb3f5ce4aa97f0e6af61d8579
+- name: github.com/Workiva/go-datastructures
+  version: 9398e38ebb7eb017f923e6aca1e0f5aa32461685
+  subpackages:
+  - augmentedtree
+- name: golang.org/x/sys
+  version: a646d33e2ee3172a661fc09bca23bb4889a41bc8
+  subpackages:
+  - unix
+testImports:
+- name: github.com/davecgh/go-spew
+  version: 6cf5744a041a0022271cefed95ba843f6d87fd51
+  subpackages:
+  - spew
+- name: github.com/pmezard/go-difflib
+  version: 792786c7400a136282c1664665ae0a8db921c6c2
+  subpackages:
+  - difflib
+- name: github.com/stretchr/testify
+  version: f390dcf405f7b83c997eac1b06768bb9f44dec18
+  subpackages:
+  - assert
+  - require
