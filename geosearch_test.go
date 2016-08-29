@@ -75,6 +75,7 @@ func TestStorage(t *testing.T) {
 	defer clean()
 
 	gs, err := NewGeoSearch(tmpfile)
+	require.NoError(t, err)
 	gs.Debug = true
 	defer gs.Close()
 
@@ -117,6 +118,28 @@ func BenchmarkCities(tb *testing.B) {
 			gs.StubbingQuery(city.c[0], city.c[1])
 		}
 	}
+}
+
+func TestCCW(t *testing.T) {
+	tmpfile, clean := createTempDB(t)
+	defer clean()
+
+	fi, err := os.Open("testdata/paysdelaloire.geojson")
+	require.NoError(t, err)
+
+	r := bufio.NewReader(fi)
+
+	gs, err := NewGeoSearch(tmpfile)
+	defer gs.Close()
+
+	err = gs.ImportGeoJSONFile(r, []string{"iso_a2", "name"})
+	require.NoError(t, err)
+
+	err = fi.Close()
+	require.NoError(t, err)
+
+	err = gs.ImportGeoData()
+	require.NoError(t, err)
 }
 
 func TestCities(t *testing.T) {

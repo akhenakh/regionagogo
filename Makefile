@@ -9,7 +9,7 @@ builddocker :
 	docker build -t akhenakh/regionagogo  -f  ./Dockerfile  .
 
 test :
-	go test -v ./...
+	go test -short -v ./...
 
 buildgendata :
 	mkdir -p bin

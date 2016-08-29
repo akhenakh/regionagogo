@@ -254,93 +254,94 @@ func (gs *GeoSearch) ImportGeoJSONFile(r io.Reader, fields []string) error {
 }
 
 func (gs *GeoSearch) insertPolygon(f *geojson.Feature, p geojson.Coordinates, rc *s2.RegionCoverer, fields []string) error {
-				// polygon
-				var points []s2.Point
-				var cpoints []*CPoint
-				// For type "MultiPolygon", the "coordinates" member must be an array of Polygon coordinate arrays.
-				// "Polygon", the "coordinates" member must be an array of LinearRing coordinate arrays.
-				// For Polygons with multiple rings, the first must be the exterior ring and any others must be interior rings or holes.
+	// polygon
+	// do not add last point in storage (first point is last point)
+	points := make([]s2.Point, len(p)-1)
 
+	// For type "MultiPolygon", the "coordinates" member must be an array of Polygon coordinate arrays.
+	// "Polygon", the "coordinates" member must be an array of LinearRing coordinate arrays.
+	// For Polygons with multiple rings, the first must be the exterior ring and any others must be interior rings or holes.
 
-				// reverse the slice
-				for i := len(p)/2 - 1; i >= 0; i-- {
-					opp := len(p) - 1 - i
-					p[i], p[opp] = p[opp], p[i]
-				}
+	for i := 0; i < len(p)-1; i++ {
+		ll := s2.LatLngFromDegrees(float64(p[i][1]), float64(p[i][0]))
+		points[i] = s2.PointFromLatLng(ll)
+	}
 
-				for i, c := range p {
-					ll := s2.LatLngFromDegrees(float64(c[1]), float64(c[0]))
-					point := s2.PointFromLatLng(ll)
-					points = append(points, point)
-					// do not add cpoint on storage (first point is last point)
-					if i == len(p)-1 {
-						break
-					}
-					cpoints = append(cpoints, &CPoint{Lat: float32(c[1]), Lng: float32(c[0])})
-				}
+	// reverse the slice
+	for i := len(points)/2 - 1; i >= 0; i-- {
+		opp := len(points) - 1 - i
+		points[i], points[opp] = points[opp], points[i]
+	}
 
-				// TODO: parallelized region cover
-				l := LoopRegionFromPoints(points)
+	// TODO: parallelized region cover
+	l := LoopRegionFromPoints(points)
 
-				if l.IsEmpty() || l.IsFull() {
-					log.Println("invalid loop")
-					return nil
-				}
+	if l.IsEmpty() || l.IsFull() {
+		log.Println("invalid loop", f.Properties)
+		return nil
+	}
 
-				covering := rc.Covering(l)
+	covering := rc.Covering(l)
 
-				data := make(map[string]string)
-				for _, field := range fields {
-					if v, ok := f.Properties[field].(string); !ok {
-						log.Println("can't find field on", f.Properties)
-					} else {
-						data[field] = v
-					}
-				}
+	data := make(map[string]string)
+	for _, field := range fields {
+		if v, ok := f.Properties[field].(string); !ok {
+			log.Println("can't find field on", f.Properties)
+		} else {
+			data[field] = v
+		}
+	}
 
-				cu := make([]uint64, len(covering))
-				var invalidLoop bool
+	cu := make([]uint64, len(covering))
+	var invalidLoop bool
 
-				for i, v := range covering {
-					// added a security there if the level is too high it probably means the polygon is bogus
-					// this to avoid a large cell to cover everything
-					if v.Level() < mininumViableLevel {
-						log.Print("cell level too big", v.Level(), data)
-						invalidLoop = true
-					}
-					cu[i] = uint64(v)
-				}
+	for i, v := range covering {
+		// added a security there if the level is too high it probably means the polygon is bogus
+		// this to avoid a large cell to cover everything
+		if v.Level() < mininumViableLevel {
+			log.Print("cell level too big", v.Level(), data)
+			invalidLoop = true
+		}
+		cu[i] = uint64(v)
+	}
 
-				// do not insert big loop
-				if invalidLoop {
-					return nil
-				}
+	// do not insert big loop
+	if invalidLoop {
+		return nil
+	}
 
-				rs := &RegionStorage{
-					Points:    cpoints,
-					Cellunion: cu,
-					Data:      data,
-				}
+	var cpoints []*CPoint
 
-				return gs.Update(func(tx *bolt.Tx) error {
-					b := tx.Bucket([]byte(loopBucket))
+	for _, p := range points {
+		ll := s2.LatLngFromPoint(p)
+		cpoints = append(cpoints, &CPoint{Lat: float32(ll.Lat.Degrees()), Lng: float32(ll.Lng.Degrees())})
+	}
 
-					id, err := b.NextSequence()
-					if err != nil {
-						return err
-					}
-					rs.Id = id
-					if gs.Debug {
-						log.Println("inserted", rs.Id, data, cu)
-					}
+	rs := &RegionStorage{
+		Points:    cpoints,
+		Cellunion: cu,
+		Data:      data,
+	}
 
-					buf, err := proto.Marshal(rs)
-					if err != nil {
-						return err
-					}
+	return gs.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(loopBucket))
 
-					return b.Put(itob(rs.Id), buf)
-				})
+		id, err := b.NextSequence()
+		if err != nil {
+			return err
+		}
+		rs.Id = id
+		if gs.Debug {
+			log.Println("inserted", rs.Id, data, cu)
+		}
+
+		buf, err := proto.Marshal(rs)
+		if err != nil {
+			return err
+		}
+
+		return b.Put(itob(rs.Id), buf)
+	})
 }
 
 // itob returns an 8-byte big endian representation of v.
