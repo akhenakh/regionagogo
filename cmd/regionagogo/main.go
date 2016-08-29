@@ -47,6 +47,8 @@ func (s *Server) countryHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
 	dbpath := flag.String("dbpath", "", "Database path")
 	debug := flag.Bool("debug", false, "Enable debug")
 

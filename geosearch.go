@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 
 	"encoding/binary"
@@ -103,14 +102,9 @@ func (gs *GeoSearch) ImportGeoData() error {
 			for _, cell := range rs.Cellunion {
 				s2interval := &S2Interval{CellID: s2.CellID(cell)}
 				intervals := gs.Query(s2interval)
-				if len(intervals) == 0 {
-					// create new interval with current loop
-					s2interval.LoopIDs = []uint64{rs.Id}
-					gs.Add(s2interval)
-					if gs.Debug {
-						log.Println("added new interval", s2interval)
-					}
-				} else {
+				found := false
+
+				if len(intervals) != 0 {
 					for _, existInterval := range intervals {
 						if existInterval.LowAtDimension(1) == s2interval.LowAtDimension(1) &&
 							existInterval.HighAtDimension(1) == s2interval.HighAtDimension(1) {
@@ -118,7 +112,18 @@ func (gs *GeoSearch) ImportGeoData() error {
 								log.Println("added to existing interval", s2interval, rs.Id)
 							}
 							s2interval.LoopIDs = append(s2interval.LoopIDs, rs.Id)
+							found = true
+							break
 						}
+					}
+				}
+
+				if !found {
+					// create new interval with current loop
+					s2interval.LoopIDs = []uint64{rs.Id}
+					gs.Add(s2interval)
+					if gs.Debug {
+						log.Println("added new interval", s2interval, rs.Id)
 					}
 				}
 			}
@@ -208,10 +213,6 @@ func (gs *GeoSearch) ImportGeoJSONFile(r io.Reader, fields []string) error {
 		return err
 	}
 
-	var geoData GeoDataStorage
-
-	cl := make(map[s2.CellID][]int64)
-
 	for _, f := range geo.Features {
 		geom, err := f.GetGeometry()
 		if err != nil {
@@ -282,7 +283,7 @@ func (gs *GeoSearch) ImportGeoJSONFile(r io.Reader, fields []string) error {
 					// added a security there if the level is too high it probably means the polygon is bogus
 					// this to avoid a large cell to cover everything
 					if v.Level() < mininumViableLevel {
-						log.Print("cell level too big", v.Level(), mp)
+						log.Print("cell level too big", v.Level(), data)
 						invalidLoop = true
 					}
 					cu[i] = uint64(v)
@@ -299,7 +300,7 @@ func (gs *GeoSearch) ImportGeoJSONFile(r io.Reader, fields []string) error {
 					Data:      data,
 				}
 
-				gs.Update(func(tx *bolt.Tx) error {
+				err = gs.Update(func(tx *bolt.Tx) error {
 					b := tx.Bucket([]byte(loopBucket))
 
 					id, err := b.NextSequence()
@@ -308,7 +309,7 @@ func (gs *GeoSearch) ImportGeoJSONFile(r io.Reader, fields []string) error {
 					}
 					rs.Id = id
 					if gs.Debug {
-						log.Println("inserted", rs.Id, data, covering)
+						log.Println("inserted", rs.Id, data, cu)
 					}
 
 					buf, err := proto.Marshal(rs)
@@ -316,29 +317,17 @@ func (gs *GeoSearch) ImportGeoJSONFile(r io.Reader, fields []string) error {
 						return err
 					}
 
-					log.Println("STORE", itob(rs.Id), rs)
 					return b.Put(itob(rs.Id), buf)
 				})
-
-				geoData.Rs = append(geoData.Rs, rs)
+				if err != nil {
+					return err
+				}
 			}
 		default:
 			return errors.New("unknown type")
 		}
 
 	}
-
-	for k, v := range cl {
-		geoData.Cl = append(geoData.Cl, &CellIDLoopStorage{Cell: uint64(k), Loops: v})
-	}
-
-	log.Println("imported", len(geoData.Rs), "regions")
-
-	b, err := proto.Marshal(&geoData)
-	if err != nil {
-		return err
-	}
-	err = ioutil.WriteFile("geodata", b, 0644)
 
 	return nil
 }

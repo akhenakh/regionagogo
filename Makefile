@@ -8,23 +8,21 @@ builddocker :
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o regionagogo.linux ./cmd/regionagogo 
 	docker build -t akhenakh/regionagogo  -f  ./Dockerfile  .
 
-test : generategeodata
+test :
 	go test -v ./...
 
 buildgendata :
 	mkdir -p bin
 	go build -o bin/gendata  ./cmd/gendata 
 
-generategeodata : buildgendata
-	./bin/gendata  -filename testdata/world_states_10m.geojson -fields iso_a2,name -dbpath ./regiondb
-	mv geodata bindata
+generategeodata : clean buildgendata
+	./bin/gendata  -filename testdata/world_states_10m.geojson -fields iso_a2,name -dbpath ./regiondb -debug
 
 protos :
 	protoc -I. geostore.proto --go_out=.
 
 clean :
-	rm -fr bin
-	rm -fr bindata
+	rm -f regiondb
 	rm -f cmd/regionagogo/regionagogo
 	rm -f cmd/gendata/geodata
 	rm -f regionagogo.linux

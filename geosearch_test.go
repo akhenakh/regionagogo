@@ -1,8 +1,8 @@
 package regionagogo
 
 import (
+	"bufio"
 	"io/ioutil"
-	"log"
 	"os"
 	"strings"
 	"testing"
@@ -94,13 +94,23 @@ func TestStorage(t *testing.T) {
 }
 
 func BenchmarkCities(tb *testing.B) {
-	gs, err := NewGeoSearch("geodata")
+	tmpfile, clean := createTempDB(tb)
+	defer clean()
+
+	fi, err := os.Open("testdata/world_states_10m.geojson")
+	defer fi.Close()
+	require.NoError(tb, err)
+
+	r := bufio.NewReader(fi)
+
+	gs, err := NewGeoSearch(tmpfile)
+	defer gs.Close()
+
+	err = gs.ImportGeoJSONFile(r, []string{"iso_a2", "name"})
 	require.NoError(tb, err)
 
 	err = gs.ImportGeoData()
-	if err != nil {
-		log.Fatal("import data failed", err)
-	}
+	require.NoError(tb, err)
 
 	for i := 0; i < tb.N; i++ {
 		for _, city := range cities {
@@ -114,14 +124,23 @@ func TestCities(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 
-	gs, err := NewGeoSearch("regiondb")
+	tmpfile, clean := createTempDB(t)
+	defer clean()
+
+	fi, err := os.Open("testdata/world_states_10m.geojson")
+	defer fi.Close()
 	require.NoError(t, err)
-	//gs.Debug = true
+
+	r := bufio.NewReader(fi)
+
+	gs, err := NewGeoSearch(tmpfile)
+	defer gs.Close()
+
+	err = gs.ImportGeoJSONFile(r, []string{"iso_a2", "name"})
+	require.NoError(t, err)
 
 	err = gs.ImportGeoData()
-	if err != nil {
-		log.Fatal("import data failed", err)
-	}
+	require.NoError(t, err)
 
 	for _, city := range cities {
 		t.Log("testing for", city)
@@ -130,5 +149,4 @@ func TestCities(t *testing.T) {
 		require.Equal(t, city.code, region.Data["iso_a2"])
 		require.Equal(t, city.name, region.Data["name"])
 	}
-
 }

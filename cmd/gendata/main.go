@@ -30,11 +30,11 @@ func (ff *FieldFlag) Set(value string) error {
 }
 
 func main() {
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	var ff FieldFlag
 
 	filename := flag.String("filename", "", "A geojson file")
 	dbpath := flag.String("dbpath", "", "Database path")
-
 	debug := flag.Bool("debug", false, "Enable debug")
 
 	flag.Var(&ff, "fields", "List of fields to fetch inside GeoJSON properties")
@@ -53,6 +53,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	gs.Debug = *debug
 
 	fi, err := os.Open(*filename)
 	defer fi.Close()
@@ -66,5 +67,5 @@ func main() {
 		log.Fatal(err)
 	}
 
-	gs.Debug = *debug
+
 }
