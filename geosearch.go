@@ -225,10 +225,35 @@ func (gs *GeoSearch) ImportGeoJSONFile(r io.Reader, fields []string) error {
 		rc := &s2.RegionCoverer{MinLevel: 1, MaxLevel: 30, MaxCells: 8}
 
 		switch geom.GetType() {
+		case "Polygon":
+			mp := geom.(*geojson.Polygon)
+			for _, p := range mp.Coordinates {
+				err := gs.insertPolygon(f, p, rc, fields)
+				if err != nil {
+					return err
+				}
+			}
 		case "MultiPolygon":
 			mp := geom.(*geojson.MultiPolygon)
 			// multipolygon
 			for _, m := range mp.Coordinates {
+				// coordinates polygon
+				p := m[0]
+
+				err := gs.insertPolygon(f, p, rc, fields)
+				if err != nil {
+					return err
+				}
+			}
+		default:
+			return errors.New("unknown type")
+		}
+	}
+
+	return nil
+}
+
+func (gs *GeoSearch) insertPolygon(f *geojson.Feature, p geojson.Coordinates, rc *s2.RegionCoverer, fields []string) error {
 				// polygon
 				var points []s2.Point
 				var cpoints []*CPoint
@@ -236,12 +261,6 @@ func (gs *GeoSearch) ImportGeoJSONFile(r io.Reader, fields []string) error {
 				// "Polygon", the "coordinates" member must be an array of LinearRing coordinate arrays.
 				// For Polygons with multiple rings, the first must be the exterior ring and any others must be interior rings or holes.
 
-				if len(m) < 1 {
-					continue
-				}
-
-				p := m[0]
-				// coordinates
 
 				// reverse the slice
 				for i := len(p)/2 - 1; i >= 0; i-- {
@@ -265,7 +284,7 @@ func (gs *GeoSearch) ImportGeoJSONFile(r io.Reader, fields []string) error {
 
 				if l.IsEmpty() || l.IsFull() {
 					log.Println("invalid loop")
-					continue
+					return nil
 				}
 
 				covering := rc.Covering(l)
@@ -294,7 +313,7 @@ func (gs *GeoSearch) ImportGeoJSONFile(r io.Reader, fields []string) error {
 
 				// do not insert big loop
 				if invalidLoop {
-					break
+					return nil
 				}
 
 				rs := &RegionStorage{
@@ -303,7 +322,7 @@ func (gs *GeoSearch) ImportGeoJSONFile(r io.Reader, fields []string) error {
 					Data:      data,
 				}
 
-				err = gs.Update(func(tx *bolt.Tx) error {
+				return gs.Update(func(tx *bolt.Tx) error {
 					b := tx.Bucket([]byte(loopBucket))
 
 					id, err := b.NextSequence()
@@ -322,17 +341,6 @@ func (gs *GeoSearch) ImportGeoJSONFile(r io.Reader, fields []string) error {
 
 					return b.Put(itob(rs.Id), buf)
 				})
-				if err != nil {
-					return err
-				}
-			}
-		default:
-			return errors.New("unknown type")
-		}
-
-	}
-
-	return nil
 }
 
 // itob returns an 8-byte big endian representation of v.
