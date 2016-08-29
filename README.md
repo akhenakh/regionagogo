@@ -8,24 +8,24 @@ It can also be used directly from docker `docker run -P akhenakh/regionagogo`
 You can use any geo data but the provided GeoJSON comes from [Natural Earth Data](http://www.naturalearthdata.com/).
 Some regions are not precise enough and some accentuated names are wrong, if you are aware of a better source please tell me.
 
-Regionagogo is using a hackish but correct region coverer, the officiel Go S2 implementation does not yet use the shape boundaries to perform a region coverage but a rect boundaries.
-Regionagogo is reading a file named geodata in protobuf format so you can generate the datafile with another S2 implementation, you can use my C++/ObjC gluecode: [regionagogogen](https://github.com/akhenakh/regionagogogen).
+It works too with the better [Gadm Data](http://gadm.org/version2) but the data are not free for commercial use.    
 
-The image submitted to Docker hub, will always be an optimized one using the C++ implementation.
+Regionagogo is using a BoltDB datafile to store the fences but the small segment tree lives in memory.  
 
 ## Build & Install
 ```
-go get github.com/jteeuwen/go-bindata/...
 go get github.com/akhenakh/regionagogo
 cd $GOPATH/src/github.com/akhenakh/regionagogo
 make
-go install github.com/akhenakh/regionagogo/cmd/regionagogo
 ```
 
-The binary `regionagogo` embed the geodata so it can be copied without any other files.
+To generate the database use the provided `gendata` command, you can specify the fields you want from the GeoJSON properties to be saved into the DB:
+```
+gendata -filename testdata/world_states_10m.geojson -fields iso_a2,name -dbpath ./region.db
+```
 
 ## Usage
-Run `regionagogo`, it will listen on port `8082`.
+Run `regionagogo -dbpath ./region.db`, it will listen on port `8082`.
 
 You can query via HTTP GET:
 
@@ -43,8 +43,7 @@ GET /country?lat=19.542915&lng=-155.665857
 You can use it in your own code without the HTTP interface:  
 
 ```
-gs := regionagogo.NewGeoSearch()
-b, _ := ioutil.ReadFile("geodata")
-gs.ImportGeoData(b)
-r := gs.Query(msg.Latitude, msg.Longitude)
+gs := regionagogo.NewGeoSearch("region.db")
+gs.ImportGeoData()
+r := gs.StabbingQuery(msg.Latitude, msg.Longitude)
 ```
