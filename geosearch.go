@@ -1,13 +1,13 @@
 package regionagogo
 
 import (
+	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
-
-	"encoding/binary"
 
 	"github.com/Workiva/go-datastructures/augmentedtree"
 	"github.com/boltdb/bolt"
@@ -19,6 +19,7 @@ import (
 const (
 	mininumViableLevel = 3 // the minimum cell level we accept
 	loopBucket         = "loop"
+	coverBucket        = "cover"
 )
 
 // GeoSearch provides in memory index and query engine for fences lookup
@@ -36,6 +37,10 @@ func NewGeoSearch(dbpath string) (*GeoSearch, error) {
 	}
 	db.Update(func(tx *bolt.Tx) error {
 		_, err := tx.CreateBucket([]byte(loopBucket))
+		if err != nil {
+			return fmt.Errorf("create bucket: %s", err)
+		}
+		_, err = tx.CreateBucket([]byte(coverBucket))
 		if err != nil {
 			return fmt.Errorf("create bucket: %s", err)
 		}
@@ -57,21 +62,30 @@ func NewGeoSearch(dbpath string) (*GeoSearch, error) {
 func (gs *GeoSearch) ImportGeoData() error {
 	var count int
 	err := gs.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(loopBucket))
+		b := tx.Bucket([]byte(coverBucket))
 		cur := b.Cursor()
 
 		// load the cell ranges into the tree
-		var rs RegionStorage
+		var rc RegionCover
 		for k, v := cur.First(); k != nil; k, v = cur.Next() {
 			count++
-			err := proto.Unmarshal(v, &rs)
+			err := proto.Unmarshal(v, &rc)
 			if err != nil {
 				return err
 			}
 			if gs.Debug {
-				log.Println("read", rs.Id, rs.Data, rs.Cellunion)
+				log.Println("read", rc.Cellunion)
 			}
-			for _, cell := range rs.Cellunion {
+
+			// read back the loopID from the key
+			var id uint64
+			buf := bytes.NewBuffer(k)
+			err = binary.Read(buf, binary.BigEndian, &id)
+			if err != nil {
+				return err
+			}
+
+			for _, cell := range rc.Cellunion {
 				s2interval := &S2Interval{CellID: s2.CellID(cell)}
 				intervals := gs.Query(s2interval)
 				found := false
@@ -81,9 +95,9 @@ func (gs *GeoSearch) ImportGeoData() error {
 						if existInterval.LowAtDimension(1) == s2interval.LowAtDimension(1) &&
 							existInterval.HighAtDimension(1) == s2interval.HighAtDimension(1) {
 							if gs.Debug {
-								log.Println("added to existing interval", s2interval, rs.Id)
+								log.Println("added to existing interval", s2interval, id)
 							}
-							s2interval.LoopIDs = append(s2interval.LoopIDs, rs.Id)
+							s2interval.LoopIDs = append(s2interval.LoopIDs, id)
 							found = true
 							break
 						}
@@ -92,10 +106,10 @@ func (gs *GeoSearch) ImportGeoData() error {
 
 				if !found {
 					// create new interval with current loop
-					s2interval.LoopIDs = []uint64{rs.Id}
+					s2interval.LoopIDs = []uint64{id}
 					gs.Add(s2interval)
 					if gs.Debug {
-						log.Println("added new interval", s2interval, rs.Id)
+						log.Println("added new interval", s2interval, id)
 					}
 				}
 			}
@@ -205,9 +219,9 @@ func (gs *GeoSearch) RectQuery(urlat, urlng, bllat, bllng float64, limit int) (R
 	return Regions(regions), nil
 }
 
-// importGeoJSONFile will load a geo json and save the polygons into
-// a msgpack file named geodata
-// fields to lookup for in GeoJSON
+// ImportGeoJSONFile will load a geo json and save the polygons into
+// the database for later lookup f
+// fields are the properties fields you want to be associated with each fences
 func (gs *GeoSearch) ImportGeoJSONFile(r io.Reader, fields []string) error {
 	var geo geojson.FeatureCollection
 
@@ -318,21 +332,17 @@ func (gs *GeoSearch) insertPolygon(f *geojson.Feature, p geojson.Coordinates, rc
 	}
 
 	rs := &RegionStorage{
-		Points:    cpoints,
-		Cellunion: cu,
-		Data:      data,
+		Points: cpoints,
+		Data:   data,
 	}
 
 	return gs.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(loopBucket))
+		loopB := tx.Bucket([]byte(loopBucket))
+		coverBucket := tx.Bucket([]byte(coverBucket))
 
-		id, err := b.NextSequence()
+		id, err := loopB.NextSequence()
 		if err != nil {
 			return err
-		}
-		rs.Id = id
-		if gs.Debug {
-			log.Println("inserted", rs.Id, data, cu)
 		}
 
 		buf, err := proto.Marshal(rs)
@@ -340,7 +350,25 @@ func (gs *GeoSearch) insertPolygon(f *geojson.Feature, p geojson.Coordinates, rc
 			return err
 		}
 
-		return b.Put(itob(rs.Id), buf)
+		if gs.Debug {
+			log.Println("inserted", id, data, cu)
+		}
+
+		// convert our loopID to bigendian to be used as key
+		k := itob(id)
+
+		err = loopB.Put(k, buf)
+		if err != nil {
+			return err
+		}
+
+		// inserting into cover index using the same key
+		bufc, err := proto.Marshal(&RegionCover{Cellunion: cu})
+		if err != nil {
+			return err
+		}
+
+		return coverBucket.Put(k, bufc)
 	})
 }
 

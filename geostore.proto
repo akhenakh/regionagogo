@@ -6,10 +6,8 @@ package regionagogo;
 
 // RegionStorage is used to represent a region in storage
 message RegionStorage {
-    uint64 id = 1;
-    repeated CPoint points = 2;
-    map<string, string> data = 3;
-    repeated uint64 cellunion = 4;
+    repeated CPoint points = 1;
+    map<string, string> data = 2;
 }
 
 // CPoint represent a coordinates lat & lng
@@ -18,3 +16,6 @@ message CPoint {
     float lng = 2;
 }
 
+message RegionCover {
+    repeated uint64 cellunion = 4;
+}
