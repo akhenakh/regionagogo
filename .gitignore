@@ -30,7 +30,6 @@ bin/
 bindata/
 cmd/regionagogo/bindata.go
 cmd/reagionagogo/regionagogo
-cmd/gendata/geodata
+cmd/ragogenfromjson/ragogenfromjson
 reagionagogo.linux
 /cmd/regionagogo/regionagogo
-/cmd/gendata/gendata

@@ -11,12 +11,12 @@ builddocker :
 test :
 	go test -short -v ./...
 
-buildgendata :
+buildgendb :
 	mkdir -p bin
-	go build -o bin/gendata  ./cmd/gendata 
+	go build -o bin/ragogenfromjson   ./cmd/ragogenfromjson
 
-generategeodata : clean buildgendata
-	./bin/gendata  -filename testdata/world_states_10m.geojson -fields iso_a2,name -dbpath ./regiondb -debug
+generategeodata : clean buildgendb
+	./bin/ragogenfromjson  -filename testdata/world_states_10m.geojson -fields iso_a2,name -dbpath ./regiondb -debug
 
 protos :
 	protoc -I. geostore.proto --go_out=.
@@ -24,6 +24,6 @@ protos :
 clean :
 	rm -f regiondb
 	rm -f cmd/regionagogo/regionagogo
-	rm -f cmd/gendata/geodata
+	rm -f cmd/ragogenfromjson/ragogenfromjson
 	rm -f regionagogo.linux
 

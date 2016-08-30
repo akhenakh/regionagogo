@@ -19,9 +19,9 @@ cd $GOPATH/src/github.com/akhenakh/regionagogo
 make
 ```
 
-To generate the database use the provided `gendata` command, you can specify the fields you want from the GeoJSON properties to be saved into the DB:
+To generate the database from GeoJSON use the provided `ragogenfromjson` command, you can specify the fields you want from the GeoJSON properties to be saved into the DB:
 ```
-gendata -filename testdata/world_states_10m.geojson -fields iso_a2,name -dbpath ./region.db
+ragogenfromjson -filename testdata/world_states_10m.geojson -fields iso_a2,name -dbpath ./region.db
 ```
 
 ## Usage
