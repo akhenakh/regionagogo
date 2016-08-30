@@ -259,7 +259,7 @@ func (gs *GeoSearch) RectQuery(urlat, urlng, bllat, bllng float64, limit int) (R
 	}
 
 	var res []*Region
-	for _,v := range regions {
+	for _, v := range regions {
 		res = append(res, v)
 	}
 	return Regions(res), nil
@@ -314,6 +314,9 @@ func (gs *GeoSearch) ImportGeoJSONFile(r io.Reader, fields []string) error {
 }
 
 func (gs *GeoSearch) insertPolygon(f *geojson.Feature, p geojson.Coordinates, rc *s2.RegionCoverer, fields []string) error {
+	if isClockwisePolygon(p) {
+		reversePolygon(p)
+	}
 	// polygon
 	// do not add last point in storage (first point is last point)
 	points := make([]s2.Point, len(p)-1)
@@ -325,12 +328,6 @@ func (gs *GeoSearch) insertPolygon(f *geojson.Feature, p geojson.Coordinates, rc
 	for i := 0; i < len(p)-1; i++ {
 		ll := s2.LatLngFromDegrees(float64(p[i][1]), float64(p[i][0]))
 		points[i] = s2.PointFromLatLng(ll)
-	}
-
-	// reverse the slice
-	for i := len(points)/2 - 1; i >= 0; i-- {
-		opp := len(points) - 1 - i
-		points[i], points[opp] = points[opp], points[i]
 	}
 
 	// TODO: parallelized region cover
@@ -416,6 +413,25 @@ func (gs *GeoSearch) insertPolygon(f *geojson.Feature, p geojson.Coordinates, rc
 
 		return coverBucket.Put(k, bufc)
 	})
+}
+
+func isClockwisePolygon(p geojson.Coordinates) bool {
+	sum := 0.0
+	for i, coord := range p[:len(p)-1] {
+		next := p[i+1]
+		sum += float64((next[0] - coord[0]) * (next[1] + coord[1]))
+	}
+	if sum == 0 {
+		return true
+	}
+	return sum > 0
+}
+
+func reversePolygon(p geojson.Coordinates) {
+	for i := len(p)/2 - 1; i >= 0; i-- {
+		opp := len(p) - 1 - i
+		p[i], p[opp] = p[opp], p[i]
+	}
 }
 
 // itob returns an 8-byte big endian representation of v.
