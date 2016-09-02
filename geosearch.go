@@ -52,11 +52,11 @@ func NewGeoSearch(dbpath string, opts ...GeoSearchOption) (*GeoSearch, error) {
 		return nil, err
 	}
 	err = db.Update(func(tx *bolt.Tx) error {
-		_, err := tx.CreateBucket([]byte(loopBucket))
+		_, err := tx.CreateBucketIfNotExists([]byte(loopBucket))
 		if err != nil {
 			return fmt.Errorf("create bucket: %s", err)
 		}
-		_, err = tx.CreateBucket([]byte(coverBucket))
+		_, err = tx.CreateBucketIfNotExists([]byte(coverBucket))
 		if err != nil {
 			return fmt.Errorf("create bucket: %s", err)
 		}

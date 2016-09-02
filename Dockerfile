@@ -1,9 +1,10 @@
-FROM alpine
+FROM alpine 
 MAINTAINER Fabrice Aneche <akh@nobugware.com>
 
-ADD ./regionagogo.linux /regionagogo
-
-USER nobody
-ENTRYPOINT /regionagogo
-
+RUN mkdir /app
+ADD regionagogo.linux region.db /app/
 EXPOSE 8082
+
+CMD ["-dbpath", "/app/region.db"]
+ENTRYPOINT ["/app/regionagogo.linux"]
+
