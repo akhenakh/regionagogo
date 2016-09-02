@@ -1,8 +1,8 @@
 package regionagogo
 
 import (
-	"github.com/kpawlik/geojson"
 	"github.com/golang/geo/s2"
+	"github.com/kpawlik/geojson"
 )
 
 // Regions a slice of *Region (type used mainly to return one GeoJSON of the regions)
@@ -15,6 +15,8 @@ type Region struct {
 	Loop *s2.Loop          `json:"-"`
 }
 
+// NewRegionFromStorage returns a Region from a RegionStorage
+// Regions can be extended, RegionStorage is a protocol buffer instance
 func NewRegionFromStorage(rs *RegionStorage) *Region {
 	if rs == nil {
 		return nil
@@ -122,4 +124,3 @@ func (r *Regions) ToGeoJSON() *geojson.FeatureCollection {
 
 	return &geo
 }
-

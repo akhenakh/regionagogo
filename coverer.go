@@ -2,11 +2,12 @@ package regionagogo
 
 import "github.com/golang/geo/s2"
 
-// Making s2.Loop implement s2.Region
+// LoopRegion Making s2.Loop implement s2.Region
 type LoopRegion struct {
 	*s2.Loop
 }
 
+// LoopRegionFromPoints creates a LoopRegion from a list of s2.Point
 func LoopRegionFromPoints(points []s2.Point) *LoopRegion {
 	loop := s2.LoopFromPoints(points)
 	return &LoopRegion{loop}

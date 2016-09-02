@@ -8,18 +8,17 @@ import (
 
 func TestCoverIsNotRectBases(t *testing.T) {
 	points := []s2.Point{
-		s2.PointFromLatLng(s2.LatLng{48.7195648396, 2.3574256897}),
-		s2.PointFromLatLng(s2.LatLng{48.7278882281, 2.40257263184}),
-		s2.PointFromLatLng(s2.LatLng{48.7273220548, 2.4028301239}),
-		s2.PointFromLatLng(s2.LatLng{48.7189985726, 2.35776901245}),
-		s2.PointFromLatLng(s2.LatLng{48.7195648396, 2.3574256897}),
+		s2.PointFromLatLng(s2.LatLng{Lat: 48.7195648396, Lng: 2.3574256897}),
+		s2.PointFromLatLng(s2.LatLng{Lat: 48.7278882281, Lng: 2.40257263184}),
+		s2.PointFromLatLng(s2.LatLng{Lat: 48.7273220548, Lng: 2.4028301239}),
+		s2.PointFromLatLng(s2.LatLng{Lat: 48.7189985726, Lng: 2.35776901245}),
+		s2.PointFromLatLng(s2.LatLng{Lat: 48.7195648396, Lng: 2.3574256897}),
 	}
 
-	marker := s2.CellIDFromLatLng(s2.LatLng{48.72163165982755, 2.35806941986084})
-	inside := s2.CellIDFromLatLng(s2.LatLng{48.71964977907006, 2.358584403991699})
+	marker := s2.CellIDFromLatLng(s2.LatLng{Lat: 48.72163165982755, Lng: 2.35806941986084})
+	inside := s2.CellIDFromLatLng(s2.LatLng{Lat: 48.71964977907006, Lng: 2.358584403991699})
 
 	rc := &s2.RegionCoverer{MinLevel: 1, MaxLevel: 30, MaxCells: 32}
-
 
 	if s2.RobustSign(points[0], points[1], points[2]) == s2.Clockwise {
 		t.Log("NOT CCW reversing")
@@ -99,6 +98,5 @@ func TestCoverIsNotRectBases(t *testing.T) {
 			t.Fatal("covering should be precise and not rect based, Split should not be contained in the answer")
 		}
 	}
-
 
 }

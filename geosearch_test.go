@@ -66,7 +66,10 @@ func createTempDB(t testing.TB) (string, func()) {
 	tmpfile, err := ioutil.TempFile("", "teststorage")
 	require.NoError(t, err)
 	return tmpfile.Name(), func() {
-		os.Remove(tmpfile.Name())
+		err := os.Remove(tmpfile.Name())
+		if err != nil {
+			t.Error(err)
+		}
 	}
 }
 

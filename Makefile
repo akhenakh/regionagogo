@@ -9,7 +9,7 @@ builddocker :
 	docker build -t akhenakh/regionagogo  -f  ./Dockerfile  .
 
 test :
-	go test -short -v ./...
+	go test -v  $(glide novendor) 
 
 buildgendb :
 	mkdir -p bin

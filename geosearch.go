@@ -31,6 +31,7 @@ type GeoSearch struct {
 	Debug bool
 }
 
+// GeoSearchOption used to pass options to NewGeoSearch
 type GeoSearchOption func(*geoSearchOptions)
 
 type geoSearchOptions struct {
@@ -44,13 +45,13 @@ func WithCachedEntries(maxCachedEntries uint) GeoSearchOption {
 	}
 }
 
-// NewGeoSearch
+// NewGeoSearch creates a new geo database, needs a writable path for BoltDB
 func NewGeoSearch(dbpath string, opts ...GeoSearchOption) (*GeoSearch, error) {
 	db, err := bolt.Open(dbpath, 0600, nil)
 	if err != nil {
 		return nil, err
 	}
-	db.Update(func(tx *bolt.Tx) error {
+	err = db.Update(func(tx *bolt.Tx) error {
 		_, err := tx.CreateBucket([]byte(loopBucket))
 		if err != nil {
 			return fmt.Errorf("create bucket: %s", err)
@@ -155,8 +156,9 @@ func (gs *GeoSearch) ImportGeoData() error {
 	return nil
 }
 
-// TODO: refactor as Fence ?
+// RegionByID returns a region from DB by its id
 func (gs *GeoSearch) RegionByID(loopID uint64) *Region {
+	// TODO: refactor as Fence ?
 	if gs.cache != nil {
 		if val, ok := gs.cache.Get(loopID); ok {
 			r, _ := val.(*Region)
