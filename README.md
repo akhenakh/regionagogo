@@ -1,3 +1,5 @@
+[![wercker status](https://app.wercker.com/status/82617ea8fffe1b93a6956c7ba5559365/s/master "wercker status")](https://app.wercker.com/project/byKey/82617ea8fffe1b93a6956c7ba5559365)
+
 Region à gogo is a microservice, it's a simple database that returns metadata associated to a fence for a given location.
 
 It uses S2 and a segment tree to create a fast geo shape database, details of implementation are described in this [blog post](http://blog.nobugware.com/post/2016/geo_db_s2_region_polygon).
