@@ -23,8 +23,9 @@ protos :
 	protoc -I. geostore.proto --go_out=.
 
 clean :
-	rm -f regiondb
+	rm -f region.db
 	rm -f cmd/regionagogo/regionagogo
 	rm -f cmd/ragogenfromjson/ragogenfromjson
+	rm -f bin/ragogenfromjson
 	rm -f regionagogo.linux
 

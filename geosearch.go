@@ -51,19 +51,17 @@ func NewGeoSearch(dbpath string, opts ...GeoSearchOption) (*GeoSearch, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = db.Update(func(tx *bolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists([]byte(loopBucket))
-		if err != nil {
-			return fmt.Errorf("create bucket: %s", err)
+
+	if errdb := db.Update(func(tx *bolt.Tx) error {
+		if _, errtx := tx.CreateBucketIfNotExists([]byte(loopBucket)); errtx != nil {
+			return fmt.Errorf("create bucket: %s", errtx)
 		}
-		_, err = tx.CreateBucketIfNotExists([]byte(coverBucket))
-		if err != nil {
-			return fmt.Errorf("create bucket: %s", err)
+		if _, errtx := tx.CreateBucketIfNotExists([]byte(coverBucket)); errtx != nil {
+			return fmt.Errorf("create bucket: %s", errtx)
 		}
 		return nil
-	})
-	if err != nil {
-		return nil, err
+	}); errdb != nil {
+		return nil, errdb
 	}
 
 	var geoOpts geoSearchOptions
