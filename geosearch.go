@@ -378,7 +378,10 @@ func (gs *GeoSearch) insertPolygon(f *geojson.Feature, p geojson.Coordinates, rc
 		Points: cpoints,
 		Data:   data,
 	}
+	return gs.storeRegion(rs, cu)
+}
 
+func (gs *GeoSearch) storeRegion(rs *RegionStorage, cover []uint64) error {
 	return gs.Update(func(tx *bolt.Tx) error {
 		loopB := tx.Bucket([]byte(loopBucket))
 		coverBucket := tx.Bucket([]byte(coverBucket))
@@ -394,7 +397,7 @@ func (gs *GeoSearch) insertPolygon(f *geojson.Feature, p geojson.Coordinates, rc
 		}
 
 		if gs.Debug {
-			log.Println("inserted", id, data, cu)
+			log.Println("inserted", id, rs.Data, cover)
 		}
 
 		// convert our loopID to bigendian to be used as key
@@ -406,7 +409,7 @@ func (gs *GeoSearch) insertPolygon(f *geojson.Feature, p geojson.Coordinates, rc
 		}
 
 		// inserting into cover index using the same key
-		bufc, err := proto.Marshal(&RegionCover{Cellunion: cu})
+		bufc, err := proto.Marshal(&RegionCover{Cellunion: cover})
 		if err != nil {
 			return err
 		}
