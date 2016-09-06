@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/golang/geo/s2"
 	"github.com/stretchr/testify/require"
 )
 
@@ -34,7 +35,10 @@ var cities = []struct {
 	{[]float64{41.059757, 45.012906}, "AZ", "Qazax"},
 }
 
-var geoJSONIsland = `{"type":"FeatureCollection","features":[{"type":"Feature","properties":{"stroke":"#555555","stroke-width":2,"stroke-opacity":1,"fill":"#555555","fill-opacity":0.5,"name":"Ile d'Orléans"},"geometry":{"type":"MultiPolygon","coordinates":[[[[-71.17218017578125,46.841407127005866],[-71.17218017578125,47.040182144806664],[-70.784912109375,47.040182144806664],[-70.784912109375,46.841407127005866],[-71.17218017578125,46.841407127005866]]]]}}]}`
+const (
+	geoJSONIsland      = `{"type":"FeatureCollection","features":[{"type":"Feature","properties":{"stroke":"#555555","stroke-width":2,"stroke-opacity":1,"fill":"#555555","fill-opacity":0.5,"name":"Ile d'Orléans"},"geometry":{"type":"MultiPolygon","coordinates":[[[[-71.17218017578125,46.841407127005866],[-71.17218017578125,47.040182144806664],[-70.784912109375,47.040182144806664],[-70.784912109375,46.841407127005866],[-71.17218017578125,46.841407127005866]]]]}}]}`
+	geoJSONoverlapping = `{"type":"FeatureCollection","features":[{"type":"Feature","properties":{"stroke":"#555555","stroke-width":2,"stroke-opacity":1,"fill":"#555555","fill-opacity":0.5,"name":"outter"},"geometry":{"type":"Polygon","coordinates":[[[2.253570556640625,48.80505453139158],[2.253570556640625,48.90128927649513],[2.429351806640625,48.90128927649513],[2.429351806640625,48.80505453139158],[2.253570556640625,48.80505453139158]]]}},{"type":"Feature","properties":{"stroke":"#555555","stroke-width":2,"stroke-opacity":1,"fill":"#555555","fill-opacity":0.5,"name":"inner"},"geometry":{"type":"Polygon","coordinates":[[[2.267303466796875,48.83353759505566],[2.267303466796875,48.87555444355432],[2.37030029296875,48.87555444355432],[2.37030029296875,48.83353759505566],[2.267303466796875,48.83353759505566]]]}},{"type":"Feature","properties":{"stroke":"#555555","stroke-width":2,"stroke-opacity":1,"fill":"#555555","fill-opacity":0.5,"name":"bigoutter"},"geometry":{"type":"Polygon","coordinates":[[[2.208251953125,48.78605682994539],[2.208251953125,48.9211457038064],[2.45819091796875,48.9211457038064],[2.45819091796875,48.78605682994539],[2.208251953125,48.78605682994539]]]}}]}`
+)
 
 // belle ile region
 var cpoints = []CPoint{
@@ -175,4 +179,39 @@ func TestCities(t *testing.T) {
 		require.Equal(t, city.code, region.Data["iso_a2"])
 		require.Equal(t, city.name, region.Data["name"])
 	}
+}
+
+func TestOverlappingRegion(t *testing.T) {
+	tmpfile, clean := createTempDB(t)
+	defer clean()
+
+	gs, err := NewGeoSearch(tmpfile)
+	require.NoError(t, err)
+	gs.Debug = true
+	defer gs.Close()
+
+	r := strings.NewReader(geoJSONoverlapping)
+
+	err = gs.ImportGeoJSONFile(r, []string{"name"})
+	require.NoError(t, err)
+
+	// this point is inside both Polygons should return the smaller
+	lat := 48.85206549830757
+	lng := 2.3064422607421875
+	p := s2.PointFromLatLng(s2.LatLngFromDegrees(lat, lng))
+
+	err = gs.ImportGeoData()
+	require.NoError(t, err)
+
+	region1 := gs.RegionByID(1)
+	require.NotNil(t, region1)
+	require.True(t, region1.Loop.ContainsPoint(p))
+
+	region1 = gs.RegionByID(2)
+	require.NotNil(t, region1)
+	require.True(t, region1.Loop.ContainsPoint(p))
+
+	region := gs.StubbingQuery(48.85206549830757, 2.3064422607421875)
+	require.NotNil(t, region)
+	require.Equal(t, "inner", region.Data["name"])
 }
