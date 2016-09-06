@@ -1,0 +1,12 @@
+box: golang
+
+build:
+    steps:
+        - wercker/setup-go-workspace:
+            package-dir: github.com/akhenakh/regionagogo
+
+        - script:
+            name: test
+            code: |
+                cd $WERCKER_SOURCE_DIR
+                make test

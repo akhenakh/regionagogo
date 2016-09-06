@@ -25,6 +25,8 @@ _testmain.go
 _steps
 _projects
 _builds
+.wercker
+.vscode
 
 bin/
 bindata/
