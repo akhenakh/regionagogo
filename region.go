@@ -68,7 +68,7 @@ func (r *Region) ToGeoJSON() *geojson.FeatureCollection {
 	}
 
 	geo.Features = []*geojson.Feature{
-		&geojson.Feature{
+		{
 			Type:       "Feature",
 			Geometry:   poly,
 			Properties: properties,
