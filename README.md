@@ -1,4 +1,4 @@
-[![wercker status](https://app.wercker.com/status/82617ea8fffe1b93a6956c7ba5559365/s/master "wercker status")](https://app.wercker.com/project/byKey/82617ea8fffe1b93a6956c7ba5559365)
+[![wercker status](https://app.wercker.com/status/82617ea8fffe1b93a6956c7ba5559365/s/master "wercker status")](https://app.wercker.com/project/byKey/82617ea8fffe1b93a6956c7ba5559365) [![Go Report Card](https://goreportcard.com/badge/github.com/akhenakh/regionagogo)](https://goreportcard.com/report/github.com/akhenakh/regionagogo)
 
 Region à gogo is a microservice, it's a simple database that returns metadata associated to a fence for a given location.
 
