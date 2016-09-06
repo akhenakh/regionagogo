@@ -10,6 +10,7 @@ import (
 	"log"
 
 	"github.com/Workiva/go-datastructures/augmentedtree"
+	"github.com/akhenakh/regionagogo/geostore"
 	"github.com/boltdb/bolt"
 	"github.com/golang/geo/s2"
 	"github.com/golang/protobuf/proto"
@@ -94,7 +95,7 @@ func (gs *GeoSearch) ImportGeoData() error {
 		cur := b.Cursor()
 
 		// load the cell ranges into the tree
-		var rc RegionCover
+		var rc geostore.RegionCover
 		for k, v := cur.First(); k != nil; k, v = cur.Next() {
 			count++
 			err := proto.Unmarshal(v, &rc)
@@ -163,12 +164,12 @@ func (gs *GeoSearch) RegionByID(loopID uint64) *Region {
 			return r
 		}
 	}
-	var rs *RegionStorage
+	var rs *geostore.RegionStorage
 	err := gs.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(loopBucket))
 		v := b.Get(itob(loopID))
 
-		var frs RegionStorage
+		var frs geostore.RegionStorage
 		err := proto.Unmarshal(v, &frs)
 		if err != nil {
 			return err
@@ -367,21 +368,21 @@ func (gs *GeoSearch) insertPolygon(f *geojson.Feature, p geojson.Coordinates, rc
 		return nil
 	}
 
-	var cpoints []*CPoint
+	var cpoints []*geostore.CPoint
 
 	for _, p := range points {
 		ll := s2.LatLngFromPoint(p)
-		cpoints = append(cpoints, &CPoint{Lat: float32(ll.Lat.Degrees()), Lng: float32(ll.Lng.Degrees())})
+		cpoints = append(cpoints, &geostore.CPoint{Lat: float32(ll.Lat.Degrees()), Lng: float32(ll.Lng.Degrees())})
 	}
 
-	rs := &RegionStorage{
+	rs := &geostore.RegionStorage{
 		Points: cpoints,
 		Data:   data,
 	}
 	return gs.storeRegion(rs, cu)
 }
 
-func (gs *GeoSearch) storeRegion(rs *RegionStorage, cover []uint64) error {
+func (gs *GeoSearch) storeRegion(rs *geostore.RegionStorage, cover []uint64) error {
 	return gs.Update(func(tx *bolt.Tx) error {
 		loopB := tx.Bucket([]byte(loopBucket))
 		coverBucket := tx.Bucket([]byte(coverBucket))
@@ -409,7 +410,7 @@ func (gs *GeoSearch) storeRegion(rs *RegionStorage, cover []uint64) error {
 		}
 
 		// inserting into cover index using the same key
-		bufc, err := proto.Marshal(&RegionCover{Cellunion: cover})
+		bufc, err := proto.Marshal(&geostore.RegionCover{Cellunion: cover})
 		if err != nil {
 			return err
 		}

@@ -1,6 +1,7 @@
 package regionagogo
 
 import (
+	"github.com/akhenakh/regionagogo/geostore"
 	"github.com/golang/geo/s2"
 	"github.com/kpawlik/geojson"
 )
@@ -17,7 +18,7 @@ type Region struct {
 
 // NewRegionFromStorage returns a Region from a RegionStorage
 // Regions can be extended, RegionStorage is a protocol buffer instance
-func NewRegionFromStorage(rs *RegionStorage) *Region {
+func NewRegionFromStorage(rs *geostore.RegionStorage) *Region {
 	if rs == nil {
 		return nil
 	}

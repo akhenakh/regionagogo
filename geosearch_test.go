@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/akhenakh/regionagogo/geostore"
 	"github.com/golang/geo/s2"
 	"github.com/stretchr/testify/require"
 )
@@ -41,7 +42,7 @@ const (
 )
 
 // belle ile region
-var cpoints = []CPoint{
+var cpoints = []geostore.CPoint{
 	{47.33148834860839, -3.114654101105884},
 	{47.355373440132155, -3.148793098023077},
 	{47.35814036718415, -3.151600714901065},

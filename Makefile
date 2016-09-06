@@ -1,7 +1,9 @@
 all : build
 
 build : test
-	 go build ./...
+	 go build ./cmd/... 
+	 go build ./geostore/... 
+	 go build .
 	
 builddocker : generategeodata
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o regionagogo.linux -a -installsuffix cgo ./cmd/regionagogo 
@@ -20,7 +22,7 @@ region.db : bin/ragogenfromjson
 	./bin/ragogenfromjson -filename testdata/world_states_10m.geojson -fields iso_a2,name -dbpath $@ 
 
 protos :
-	protoc -I. geostore.proto --go_out=.
+	go generate github.com/akhenakh/regionagogo/geostore
 
 clean :
 	rm -f region.db
