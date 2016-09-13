@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/akhenakh/regionagogo"
+	"github.com/akhenakh/regionagogo/db/boltdb"
 )
 
 // fieldFlag reusable parse Value to create import command
@@ -49,11 +50,12 @@ func main() {
 		os.Exit(2)
 	}
 
-	gs, err := regionagogo.NewGeoSearch(*dbpath)
+	opts := boltdb.WithDebug(*debug)
+
+	gs, err := boltdb.NewGeoFenceBoltDB(*dbpath, opts)
 	if err != nil {
 		log.Fatal(err)
 	}
-	gs.Debug = *debug
 
 	fi, err := os.Open(*filename)
 	defer fi.Close()
@@ -62,7 +64,7 @@ func main() {
 	}
 	r := bufio.NewReader(fi)
 
-	err = gs.ImportGeoJSONFile(r, ff.Fields)
+	err = regionagogo.ImportGeoJSONFile(gs, r, ff.Fields)
 	if err != nil {
 		log.Fatal(err)
 	}

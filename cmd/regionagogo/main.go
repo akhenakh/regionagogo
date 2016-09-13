@@ -8,10 +8,11 @@ import (
 	"strconv"
 
 	"github.com/akhenakh/regionagogo"
+	"github.com/akhenakh/regionagogo/db/boltdb"
 )
 
 type Server struct {
-	*regionagogo.GeoSearch
+	regionagogo.GeoFenceDB
 }
 
 // queryHandler takes a lat & lng query params and return a JSON
@@ -52,18 +53,16 @@ func main() {
 	cachedEntries := flag.Uint("cachedEntries", 0, "Region Cache size, 0 for disabled")
 
 	flag.Parse()
-	opts := regionagogo.WithCachedEntries(*cachedEntries)
-	gs, err := regionagogo.NewGeoSearch(*dbpath, opts)
+	opts := []boltdb.GeoFenceBoltDBOption{
+		boltdb.WithCachedEntries(*cachedEntries),
+		boltdb.WithDebug(*debug),
+	}
+	gs, err := boltdb.NewGeoFenceBoltDB(*dbpath, opts...)
 	if err != nil {
 		log.Fatal(err)
 	}
-	gs.Debug = *debug
 
-	err = gs.ImportGeoData()
-	if err != nil {
-		log.Fatal(err)
-	}
-	s := &Server{GeoSearch: gs}
+	s := &Server{GeoFenceDB: gs}
 	http.HandleFunc("/query", s.queryHandler)
 	log.Println(http.ListenAndServe(":8082", nil))
 }

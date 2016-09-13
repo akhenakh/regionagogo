@@ -10,7 +10,7 @@ builddocker : generategeodata
 	docker build -t akhenakh/regionagogo -f ./Dockerfile  .
 
 test :
-	go test -v $(glide novendor) 
+	go test -v . ./cmd/... ./geostore/... ./db/...
 
 bin/ragogenfromjson :
 	mkdir -p bin

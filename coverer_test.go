@@ -68,7 +68,7 @@ func TestCoverIsNotRectBases(t *testing.T) {
 		t.Fatal("our test is not working anymore we should have found Split in the rect based cover")
 	}
 
-	l := LoopRegionFromPoints(points)
+	l := LoopFenceFromPoints(points)
 	if l.IsEmpty() || l.IsFull() {
 		t.Fatal("invalid loop")
 	}

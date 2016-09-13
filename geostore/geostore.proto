@@ -2,10 +2,8 @@ syntax = "proto3";
 
 package geostore;
 
-
-
-// RegionStorage is used to represent a region in storage
-message RegionStorage {
+// FenceStorage is used to represent a Fence in storage
+message FenceStorage {
     repeated CPoint points = 1;
     map<string, string> data = 2;
 }
@@ -16,6 +14,7 @@ message CPoint {
     float lng = 2;
 }
 
-message RegionCover {
-    repeated uint64 cellunion = 4;
+// FenceCover is used to store an s2 coverage of a fence
+message FenceCover {
+    repeated uint64 cellunion = 1;
 }

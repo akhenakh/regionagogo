@@ -12,7 +12,7 @@ Some regions are not precise enough and some accentuated names are wrong, if you
 
 It works too with the better [Gadm Data](http://gadm.org/version2) but the data are not free for commercial use.    
 
-Regionagogo is using a BoltDB datafile to store the fences but the small segment tree lives in memory.  
+Regionagogo is using a BoltDB datafile to store the fences and a small segment tree as index lives in memory.  
 
 ## Build & Install
 ```
@@ -46,6 +46,9 @@ You can use it in your own code without the HTTP interface:
 
 ```
 gs := regionagogo.NewGeoSearch("region.db")
-gs.ImportGeoData()
 r := gs.StabbingQuery(msg.Latitude, msg.Longitude)
 ```
+
+## TODO
+- move the cache outside of boltdb storage to make it generic 
+- implement an in memory storage

@@ -6,19 +6,19 @@ import (
 	"github.com/kpawlik/geojson"
 )
 
-// Regions a slice of *Region (type used mainly to return one GeoJSON of the regions)
-type Regions []*Region
+// Fences a slice of *Fence (type used mainly to return one GeoJSON of the regions)
+type Fences []*Fence
 
-// Region is region for memory use
+// Fence is an s2 represented FenceStorage
 // it contains an S2 loop and the associated metadata
-type Region struct {
+type Fence struct {
 	Data map[string]string `json:"data"`
 	Loop *s2.Loop          `json:"-"`
 }
 
-// NewRegionFromStorage returns a Region from a RegionStorage
-// Regions can be extended, RegionStorage is a protocol buffer instance
-func NewRegionFromStorage(rs *geostore.RegionStorage) *Region {
+// NewFenceFromStorage returns a Fence from a FenceStorage
+// Fence can be extended, FenceStorage is a protocol buffer instance
+func NewFenceFromStorage(rs *geostore.FenceStorage) *Fence {
 	if rs == nil {
 		return nil
 	}
@@ -31,18 +31,18 @@ func NewRegionFromStorage(rs *geostore.RegionStorage) *Region {
 		points[i] = point
 	}
 
-	l := LoopRegionFromPoints(points)
+	l := LoopFenceFromPoints(points)
 
-	return &Region{Data: rs.Data, Loop: l.Loop}
+	return &Fence{Data: rs.Data, Loop: l.Loop}
 }
 
 // ToGeoJSON transforms a Region to a valid GeoJSON
-func (r *Region) ToGeoJSON() *geojson.FeatureCollection {
+func (f *Fence) ToGeoJSON() *geojson.FeatureCollection {
 	var geo geojson.FeatureCollection
 
 	var cs []geojson.Coordinate
 
-	points := r.Loop.Vertices()
+	points := f.Loop.Vertices()
 	for i, p := range points {
 		ll := s2.LatLngFromPoint(p)
 		c := geojson.Coordinate{
@@ -64,7 +64,7 @@ func (r *Region) ToGeoJSON() *geojson.FeatureCollection {
 
 	properties := make(map[string]interface{})
 
-	for k, v := range r.Data {
+	for k, v := range f.Data {
 		properties[k] = v
 	}
 
@@ -80,15 +80,15 @@ func (r *Region) ToGeoJSON() *geojson.FeatureCollection {
 	return &geo
 }
 
-// ToGeoJSON transforms a set of Region to a valid GeoJSON
-func (r *Regions) ToGeoJSON() *geojson.FeatureCollection {
+// ToGeoJSON transforms a set of Fences to a valid GeoJSON
+func (f *Fences) ToGeoJSON() *geojson.FeatureCollection {
 	var geo geojson.FeatureCollection
 	var features []*geojson.Feature
 
-	for _, region := range *r {
+	for _, fence := range *f {
 		var cs []geojson.Coordinate
 
-		points := region.Loop.Vertices()
+		points := fence.Loop.Vertices()
 		for _, p := range points {
 			ll := s2.LatLngFromPoint(p)
 			c := geojson.Coordinate{
@@ -107,7 +107,7 @@ func (r *Regions) ToGeoJSON() *geojson.FeatureCollection {
 
 		properties := make(map[string]interface{})
 
-		for k, v := range region.Data {
+		for k, v := range fence.Data {
 			properties[k] = v
 		}
 

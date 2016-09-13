@@ -1,4 +1,4 @@
-package regionagogo
+package boltdb
 
 import (
 	"bufio"
@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/akhenakh/regionagogo"
 	"github.com/akhenakh/regionagogo/geostore"
 	"github.com/golang/geo/s2"
 	"github.com/stretchr/testify/require"
@@ -82,21 +83,18 @@ func TestStorage(t *testing.T) {
 	tmpfile, clean := createTempDB(t)
 	defer clean()
 
-	gs, err := NewGeoSearch(tmpfile)
+	opts := WithDebug(true)
+	gs, err := NewGeoFenceBoltDB(tmpfile, opts)
 	require.NoError(t, err)
-	gs.Debug = true
 	defer gs.Close()
 
 	r := strings.NewReader(geoJSONIsland)
 
-	err = gs.ImportGeoJSONFile(r, []string{"name"})
+	err = regionagogo.ImportGeoJSONFile(gs, r, []string{"name"})
 	require.NoError(t, err)
 
-	region := gs.RegionByID(1)
+	region := gs.FenceByID(1)
 	require.NotNil(t, region)
-
-	err = gs.ImportGeoData()
-	require.NoError(t, err)
 
 	region = gs.StubbingQuery(47.01492366313195, -70.842592064976714)
 	require.NotNil(t, region)
@@ -106,19 +104,16 @@ func BenchmarkCities(tb *testing.B) {
 	tmpfile, clean := createTempDB(tb)
 	defer clean()
 
-	fi, err := os.Open("testdata/world_states_10m.geojson")
+	fi, err := os.Open("../../testdata/world_states_10m.geojson")
 	defer fi.Close()
 	require.NoError(tb, err)
 
 	r := bufio.NewReader(fi)
 
-	gs, err := NewGeoSearch(tmpfile)
+	gs, err := NewGeoFenceBoltDB(tmpfile)
 	defer gs.Close()
 
-	err = gs.ImportGeoJSONFile(r, []string{"iso_a2", "name"})
-	require.NoError(tb, err)
-
-	err = gs.ImportGeoData()
+	err = regionagogo.ImportGeoJSONFile(gs, r, []string{"iso_a2", "name"})
 	require.NoError(tb, err)
 
 	for i := 0; i < tb.N; i++ {
@@ -132,21 +127,18 @@ func TestCCW(t *testing.T) {
 	tmpfile, clean := createTempDB(t)
 	defer clean()
 
-	fi, err := os.Open("testdata/paysdelaloire.geojson")
+	fi, err := os.Open("../../testdata/paysdelaloire.geojson")
 	require.NoError(t, err)
 
 	r := bufio.NewReader(fi)
 
-	gs, err := NewGeoSearch(tmpfile)
+	gs, err := NewGeoFenceBoltDB(tmpfile)
 	defer gs.Close()
 
-	err = gs.ImportGeoJSONFile(r, []string{"iso_a2", "name"})
+	err = regionagogo.ImportGeoJSONFile(gs, r, []string{"iso_a2", "name"})
 	require.NoError(t, err)
 
 	err = fi.Close()
-	require.NoError(t, err)
-
-	err = gs.ImportGeoData()
 	require.NoError(t, err)
 }
 
@@ -158,19 +150,16 @@ func TestCities(t *testing.T) {
 	tmpfile, clean := createTempDB(t)
 	defer clean()
 
-	fi, err := os.Open("testdata/world_states_10m.geojson")
+	fi, err := os.Open("../../testdata/world_states_10m.geojson")
 	defer fi.Close()
 	require.NoError(t, err)
 
 	r := bufio.NewReader(fi)
 
-	gs, err := NewGeoSearch(tmpfile)
+	gs, err := NewGeoFenceBoltDB(tmpfile)
 	defer gs.Close()
 
-	err = gs.ImportGeoJSONFile(r, []string{"iso_a2", "name"})
-	require.NoError(t, err)
-
-	err = gs.ImportGeoData()
+	err = regionagogo.ImportGeoJSONFile(gs, r, []string{"iso_a2", "name"})
 	require.NoError(t, err)
 
 	for _, city := range cities {
@@ -186,14 +175,14 @@ func TestOverlappingRegion(t *testing.T) {
 	tmpfile, clean := createTempDB(t)
 	defer clean()
 
-	gs, err := NewGeoSearch(tmpfile)
+	opts := WithDebug(true)
+	gs, err := NewGeoFenceBoltDB(tmpfile, opts)
 	require.NoError(t, err)
-	gs.Debug = true
 	defer gs.Close()
 
 	r := strings.NewReader(geoJSONoverlapping)
 
-	err = gs.ImportGeoJSONFile(r, []string{"name"})
+	err = regionagogo.ImportGeoJSONFile(gs, r, []string{"name"})
 	require.NoError(t, err)
 
 	// this point is inside both Polygons should return the smaller
@@ -201,14 +190,11 @@ func TestOverlappingRegion(t *testing.T) {
 	lng := 2.3064422607421875
 	p := s2.PointFromLatLng(s2.LatLngFromDegrees(lat, lng))
 
-	err = gs.ImportGeoData()
-	require.NoError(t, err)
-
-	region1 := gs.RegionByID(1)
+	region1 := gs.FenceByID(1)
 	require.NotNil(t, region1)
 	require.True(t, region1.Loop.ContainsPoint(p))
 
-	region1 = gs.RegionByID(2)
+	region1 = gs.FenceByID(2)
 	require.NotNil(t, region1)
 	require.True(t, region1.Loop.ContainsPoint(p))
 
