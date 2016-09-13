@@ -11,16 +11,16 @@ import (
 	"github.com/akhenakh/regionagogo"
 )
 
-// FieldFlag reusable parse Value to create import command
-type FieldFlag struct {
+// fieldFlag reusable parse Value to create import command
+type fieldFlag struct {
 	Fields []string
 }
 
-func (ff *FieldFlag) String() string {
+func (ff *fieldFlag) String() string {
 	return fmt.Sprint(ff.Fields)
 }
 
-func (ff *FieldFlag) Set(value string) error {
+func (ff *fieldFlag) Set(value string) error {
 	if len(ff.Fields) > 0 {
 		return fmt.Errorf("The field flag is already set")
 	}
@@ -31,7 +31,7 @@ func (ff *FieldFlag) Set(value string) error {
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	var ff FieldFlag
+	var ff fieldFlag
 
 	filename := flag.String("filename", "", "A geojson file")
 	dbpath := flag.String("dbpath", "", "Database path")

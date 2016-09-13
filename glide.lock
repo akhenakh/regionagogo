@@ -1,5 +1,5 @@
 hash: 79adfd240a193712535a2f468753e9e4a5a72acdfbc0c0f5c2e0988bf8ad69df
-updated: 2016-08-29T18:23:27.08007024-04:00
+updated: 2016-09-12T17:06:53.850028532-04:00
 imports:
 - name: github.com/boltdb/bolt
   version: 583e8937c61f1af6513608ccc75c97b6abdf4ff9
@@ -31,7 +31,7 @@ imports:
   - unix
 testImports:
 - name: github.com/davecgh/go-spew
-  version: 6cf5744a041a0022271cefed95ba843f6d87fd51
+  version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9
   subpackages:
   - spew
 - name: github.com/pmezard/go-difflib

@@ -13,10 +13,13 @@ func LoopRegionFromPoints(points []s2.Point) *LoopRegion {
 	return &LoopRegion{loop}
 }
 
+// CapBound returns the cap that contains this loop
 func (l *LoopRegion) CapBound() s2.Cap {
 	return l.Loop.CapBound()
 }
 
+// ContainsCell checks whether the cell is completely enclosed by this loop.
+// Does not count for loop interior and uses raycasting.
 func (l *LoopRegion) ContainsCell(c s2.Cell) bool {
 	for i := 0; i < 4; i++ {
 		v := c.Vertex(i)
@@ -27,6 +30,8 @@ func (l *LoopRegion) ContainsCell(c s2.Cell) bool {
 	return true
 }
 
+// IntersectsCell checks if any edge of the cell intersects the loop or if the cell is contained.
+// Does not count for loop interior and uses raycasting.
 func (l *LoopRegion) IntersectsCell(c s2.Cell) bool {
 	// if any of the cell's vertices is contained by the loop
 	// they intersect
