@@ -20,5 +20,5 @@ build:
         - script:
             name: test
             code: |
-                cd $WERCKER_SOURCE_DIR
+                go get github.com/stretchr/testify
                 make test
