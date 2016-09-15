@@ -9,4 +9,5 @@ build:
             name: test
             code: |
                 cd $WERCKER_SOURCE_DIR
+                go get .
                 make test
