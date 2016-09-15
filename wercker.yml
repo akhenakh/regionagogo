@@ -9,5 +9,5 @@ build:
             name: test
             code: |
                 cd $WERCKER_SOURCE_DIR
-                go get .
+                go get github.com/akhenakh/regionagogo 
                 make test
