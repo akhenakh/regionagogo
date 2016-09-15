@@ -165,7 +165,11 @@ func (gs *GeoFenceBoltDB) importGeoData() error {
 		return err
 	}
 
-	log.Println("loaded", count, "fences")
+	if count != 0 {
+		log.Println("loaded", count, "existing fences")
+	} else {
+		log.Println("initialized database")
+	}
 
 	return nil
 }
