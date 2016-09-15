@@ -52,7 +52,7 @@ func WithDebug(debug bool) GeoFenceBoltDBOption {
 }
 
 // NewGeoFenceBoltDB creates a new geo database, needs a writable path for BoltDB
-func NewGeoFenceBoltDB(dbpath string, opts ...GeoFenceBoltDBOption) (region.GeoFenceDB, error) {
+func NewGeoFenceBoltDB(dbpath string, opts ...GeoFenceBoltDBOption) (*GeoFenceBoltDB, error) {
 	db, err := bolt.Open(dbpath, 0600, nil)
 	if err != nil {
 		return nil, err
