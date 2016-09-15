@@ -48,6 +48,8 @@ func ImportGeoJSONFile(gs GeoFenceDB, r io.Reader, fields []string) error {
 		return err
 	}
 
+	var count int
+
 	for _, f := range geo.Features {
 		geom, err := f.GetGeometry()
 		if err != nil {
@@ -63,6 +65,7 @@ func ImportGeoJSONFile(gs GeoFenceDB, r io.Reader, fields []string) error {
 					if err := gs.StoreFence(rc, cu); err != nil {
 						return err
 					}
+					count++
 				}
 			}
 		case "MultiPolygon":
@@ -77,12 +80,15 @@ func ImportGeoJSONFile(gs GeoFenceDB, r io.Reader, fields []string) error {
 					if err := gs.StoreFence(rc, cu); err != nil {
 						return err
 					}
+					count++
 				}
 			}
 		default:
 			return errors.New("unknown type")
 		}
 	}
+
+	log.Println(count, "new fences imported")
 
 	return nil
 }
