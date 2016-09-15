@@ -6,8 +6,19 @@ build:
             package-dir: github.com/akhenakh/regionagogo
 
         - script:
+            name: go get
+            code: |
+                cd $WERCKER_SOURCE_DIR
+                go get ./...
+
+        # Build the project
+        - script:
+            name: go build
+            code: |
+                go build ./...
+
+        - script:
             name: test
             code: |
                 cd $WERCKER_SOURCE_DIR
-                go get github.com/akhenakh/regionagogo 
                 make test
