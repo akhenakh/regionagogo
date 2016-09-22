@@ -35,6 +35,7 @@ type GeoFenceBoltDBOption func(*geoFenceBoltDBOptions)
 type geoFenceBoltDBOptions struct {
 	maxCachedEntries uint
 	debug            bool
+	ro               bool
 }
 
 // WithCachedEntries enable an LRU cache default is disabled
@@ -51,29 +52,39 @@ func WithDebug(debug bool) GeoFenceBoltDBOption {
 	}
 }
 
+// WithReadOnly enable read only db
+func WithReadOnly(ro bool) GeoFenceBoltDBOption {
+	return func(o *geoFenceBoltDBOptions) {
+		o.ro = ro
+	}
+}
+
 // NewGeoFenceBoltDB creates a new geo database, needs a writable path for BoltDB
 func NewGeoFenceBoltDB(dbpath string, opts ...GeoFenceBoltDBOption) (*GeoFenceBoltDB, error) {
-	db, err := bolt.Open(dbpath, 0600, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if errdb := db.Update(func(tx *bolt.Tx) error {
-		if _, errtx := tx.CreateBucketIfNotExists([]byte(loopBucket)); errtx != nil {
-			return fmt.Errorf("create bucket: %s", errtx)
-		}
-		if _, errtx := tx.CreateBucketIfNotExists([]byte(coverBucket)); errtx != nil {
-			return fmt.Errorf("create bucket: %s", errtx)
-		}
-		return nil
-	}); errdb != nil {
-		return nil, errdb
-	}
-
 	var geoOpts geoFenceBoltDBOptions
 
 	for _, opt := range opts {
 		opt(&geoOpts)
+	}
+
+	db, err := bolt.Open(dbpath, 0600, &bolt.Options{ReadOnly: geoOpts.ro})
+	if err != nil {
+		return nil, err
+	}
+
+	// create bucket if we have write permission
+	if !geoOpts.ro {
+		if errdb := db.Update(func(tx *bolt.Tx) error {
+			if _, errtx := tx.CreateBucketIfNotExists([]byte(loopBucket)); errtx != nil {
+				return fmt.Errorf("create bucket: %s", errtx)
+			}
+			if _, errtx := tx.CreateBucketIfNotExists([]byte(coverBucket)); errtx != nil {
+				return fmt.Errorf("create bucket: %s", errtx)
+			}
+			return nil
+		}); errdb != nil {
+			return nil, errdb
+		}
 	}
 
 	gs := &GeoFenceBoltDB{
