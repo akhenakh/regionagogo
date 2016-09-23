@@ -76,5 +76,3 @@ func (gf *GeoDB) QueryHandler(lat, lng float64) *Fence {
 
 	return fm
 }
-
-//go:generate go-mobile-collection $GOFILE
