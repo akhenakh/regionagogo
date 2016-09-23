@@ -8,7 +8,7 @@ import (
 )
 
 type GeoDB struct {
-	g regionagogo.GeoFenceDB
+	db regionagogo.GeoFenceDB
 }
 
 type Fence struct {
@@ -33,20 +33,20 @@ func (gf *GeoDB) OpenDB(path string) error {
 		boltdb.WithDebug(false),
 		boltdb.WithReadOnly(true),
 	}
-	gs, err := boltdb.NewGeoFenceBoltDB(path, opts...)
+	db, err := boltdb.NewGeoFenceBoltDB(path, opts...)
 	if err != nil {
 		return err
 	}
-	gf.g = gs
+	gf.db = db
 	return nil
 }
 
 func (gf *GeoDB) Close() error {
-	return gf.g.Close()
+	return gf.db.Close()
 }
 
 func (gf *GeoDB) FenceByID(id int) *Fence {
-	region := gf.g.FenceByID(uint64(id))
+	region := gf.db.FenceByID(uint64(id))
 	if region == nil {
 		return nil
 	}
@@ -62,7 +62,7 @@ func (gf *GeoDB) FenceByID(id int) *Fence {
 }
 
 func (gf *GeoDB) QueryHandler(lat, lng float64) *Fence {
-	region := gf.g.StubbingQuery(lat, lng)
+	region := gf.db.StubbingQuery(lat, lng)
 	if region == nil {
 		return nil
 	}
