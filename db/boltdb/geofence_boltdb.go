@@ -119,12 +119,13 @@ func (gs *GeoFenceBoltDB) index(fc *geostore.FenceCover, loopID uint64) {
 			for _, existInterval := range intervals {
 				if existInterval.LowAtDimension(1) == s2interval.LowAtDimension(1) &&
 					existInterval.HighAtDimension(1) == s2interval.HighAtDimension(1) {
-					if gs.debug {
-						log.Println("added to existing interval", s2interval, loopID)
-					}
 					// update existing interval
 					existS2Interval := existInterval.(*region.S2Interval)
-					existS2Interval.LoopIDs = append(s2interval.LoopIDs, loopID)
+					if gs.debug {
+						log.Printf("added %d to existing interval %s containing %v", loopID, existS2Interval, existS2Interval.LoopIDs)
+					}
+
+					existS2Interval.LoopIDs = append(existS2Interval.LoopIDs, loopID)
 					found = true
 					break
 				}
@@ -136,7 +137,7 @@ func (gs *GeoFenceBoltDB) index(fc *geostore.FenceCover, loopID uint64) {
 			s2interval.LoopIDs = []uint64{loopID}
 			gs.Add(s2interval)
 			if gs.debug {
-				log.Println("added new interval", s2interval, loopID)
+				log.Printf("added %v to new interval %s", s2interval.LoopIDs, s2interval)
 			}
 		}
 	}
@@ -243,9 +244,6 @@ func (gs *GeoFenceBoltDB) StubbingQuery(lat, lng float64) *region.Fence {
 		// return only the one that is contained in the other
 		for _, loopID := range sitv.LoopIDs {
 			fence := gs.FenceByID(loopID)
-			if fence != nil && gs.debug {
-				log.Println("testing", q, sitv, sitv.LoopIDs)
-			}
 			if fence != nil && fence.Loop.ContainsPoint(q.Point()) {
 				if foundFence == nil {
 					if gs.debug {
