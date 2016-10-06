@@ -11,13 +11,13 @@ import (
 	"github.com/akhenakh/regionagogo/db/boltdb"
 )
 
-type Server struct {
+type server struct {
 	regionagogo.GeoFenceDB
 }
 
 // queryHandler takes a lat & lng query params and return a JSON
 // with the country of the coordinate
-func (s *Server) queryHandler(w http.ResponseWriter, r *http.Request) {
+func (s *server) queryHandler(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	slat := query.Get("lat")
 	lat, err := strconv.ParseFloat(slat, 64)
@@ -62,7 +62,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	s := &Server{GeoFenceDB: gs}
+	s := &server{GeoFenceDB: gs}
 	http.HandleFunc("/query", s.queryHandler)
 	log.Println(http.ListenAndServe(":8082", nil))
 }
