@@ -40,6 +40,7 @@ var cities = []struct {
 const (
 	geoJSONIsland      = `{"type":"FeatureCollection","features":[{"type":"Feature","properties":{"stroke":"#555555","stroke-width":2,"stroke-opacity":1,"fill":"#555555","fill-opacity":0.5,"name":"Ile d'Orléans"},"geometry":{"type":"MultiPolygon","coordinates":[[[[-71.17218017578125,46.841407127005866],[-71.17218017578125,47.040182144806664],[-70.784912109375,47.040182144806664],[-70.784912109375,46.841407127005866],[-71.17218017578125,46.841407127005866]]]]}}]}`
 	geoJSONoverlapping = `{"type":"FeatureCollection","features":[{"type":"Feature","properties":{"stroke":"#555555","stroke-width":2,"stroke-opacity":1,"fill":"#555555","fill-opacity":0.5,"name":"outter"},"geometry":{"type":"Polygon","coordinates":[[[2.253570556640625,48.80505453139158],[2.253570556640625,48.90128927649513],[2.429351806640625,48.90128927649513],[2.429351806640625,48.80505453139158],[2.253570556640625,48.80505453139158]]]}},{"type":"Feature","properties":{"stroke":"#555555","stroke-width":2,"stroke-opacity":1,"fill":"#555555","fill-opacity":0.5,"name":"inner"},"geometry":{"type":"Polygon","coordinates":[[[2.267303466796875,48.83353759505566],[2.267303466796875,48.87555444355432],[2.37030029296875,48.87555444355432],[2.37030029296875,48.83353759505566],[2.267303466796875,48.83353759505566]]]}},{"type":"Feature","properties":{"stroke":"#555555","stroke-width":2,"stroke-opacity":1,"fill":"#555555","fill-opacity":0.5,"name":"bigoutter"},"geometry":{"type":"Polygon","coordinates":[[[2.208251953125,48.78605682994539],[2.208251953125,48.9211457038064],[2.45819091796875,48.9211457038064],[2.45819091796875,48.78605682994539],[2.208251953125,48.78605682994539]]]}}]}`
+	geoJSONbadcover    = `{"type":"FeatureCollection","crs":{"type":"name","properties":{"name":"urn:ogc:def:crs:OGC:1.3:CRS84"}},"features":[{"type":"Feature","properties":{"fid":4722,"ID_0":79,"ISO":"FRA","NAME_0":"France","ID_1":4,"NAME_1":"Île-de-France","ID_2":13,"NAME_2":"Hauts-de-Seine","ID_3":51,"NAME_3":"Boulogne-Billancourt","ID_4":507,"NAME_4":"Chaville","ID_5":4722,"NAME_5":"Vaucresson","CCN_5":null,"CCA_5":null,"TYPE_5":"Commune simple","ENGTYPE_5":"Commune","Shape_Length":0.11045494594174084,"Shape_Area":0.00037342733185105235},"geometry":{"type":"MultiPolygon","coordinates":[[[[2.148475885391292,48.828491210937557],[2.145872592926139,48.836902618408203],[2.150032281875667,48.846660614013672],[2.159867525100708,48.847721099853629],[2.182619333267212,48.851566314697209],[2.179811716079769,48.845520019531364],[2.167349100112972,48.84089279174799],[2.166622877121029,48.837741851806697],[2.156419277191276,48.837657928466797],[2.151465654373169,48.821407318115348],[2.148475885391292,48.828491210937557]]]]}},{"type":"Feature","properties":{"fid":4740,"ID_0":79,"ISO":"FRA","NAME_0":"France","ID_1":4,"NAME_1":"Île-de-France","ID_2":13,"NAME_2":"Hauts-de-Seine","ID_3":52,"NAME_3":"Nanterre","ID_4":524,"NAME_4":"Rueil-Malmaison","ID_5":4740,"NAME_5":"Rueil-Malmaison","CCN_5":null,"CCA_5":null,"TYPE_5":"Chef-lieu canton","ENGTYPE_5":"Commune","Shape_Length":0.17305815277123773,"Shape_Area":0.0017781421356630909},"geometry":{"type":"MultiPolygon","coordinates":[[[[2.197860956192073,48.854763031005973],[2.182619333267212,48.851566314697209],[2.159867525100708,48.847721099853629],[2.150411605834961,48.858501434326172],[2.153764247894401,48.864406585693359],[2.150387287140006,48.870868682861328],[2.158314466476384,48.880607604980582],[2.16934871673584,48.895812988281307],[2.207759618759155,48.874229431152344],[2.211281538009644,48.86854171752924],[2.200677394867057,48.86307525634777],[2.203563690185547,48.860630035400447],[2.197860956192073,48.854763031005973]]]]}}]}`
 )
 
 // belle ile region
@@ -201,4 +202,32 @@ func TestOverlappingRegion(t *testing.T) {
 	region := gs.StubbingQuery(48.85206549830757, 2.3064422607421875)
 	require.NotNil(t, region)
 	require.Equal(t, "inner", region.Data["name"])
+}
+
+func TestBadCover(t *testing.T) {
+	tmpfile, clean := createTempDB(t)
+	defer clean()
+
+	opts := WithDebug(true)
+	gs, err := NewGeoFenceBoltDB(tmpfile, opts)
+	require.NoError(t, err)
+	defer gs.Close()
+
+	r := strings.NewReader(geoJSONbadcover)
+
+	err = regionagogo.ImportGeoJSONFile(gs, r, []string{"NAME_5"})
+	require.NoError(t, err)
+
+	// this point is inside geoJSONbadcover but was failing the test
+	lat := 48.85319502679562
+	lng := 2.165164947509766
+	p := s2.PointFromLatLng(s2.LatLngFromDegrees(lat, lng))
+
+	region2 := gs.FenceByID(2)
+	require.NotNil(t, region2)
+	require.True(t, region2.Loop.ContainsPoint(p))
+
+	region := gs.StubbingQuery(lat, lng)
+	require.NotNil(t, region)
+	require.NotNil(t, region.Data["NAME_5"], region2.Data["NAME_5"])
 }

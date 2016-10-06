@@ -122,7 +122,9 @@ func (gs *GeoFenceBoltDB) index(fc *geostore.FenceCover, loopID uint64) {
 					if gs.debug {
 						log.Println("added to existing interval", s2interval, loopID)
 					}
-					s2interval.LoopIDs = append(s2interval.LoopIDs, loopID)
+					// update existing interval
+					existS2Interval := existInterval.(*region.S2Interval)
+					existS2Interval.LoopIDs = append(s2interval.LoopIDs, loopID)
 					found = true
 					break
 				}
@@ -219,7 +221,9 @@ func (gs *GeoFenceBoltDB) FenceByID(loopID uint64) *region.Fence {
 
 // StubbingQuery returns the fence for the corresponding lat, lng point
 func (gs *GeoFenceBoltDB) StubbingQuery(lat, lng float64) *region.Fence {
+	// the CellID at L30
 	q := s2.CellIDFromLatLng(s2.LatLngFromDegrees(lat, lng))
+
 	i := &region.S2Interval{CellID: q}
 
 	if gs.debug {
@@ -227,33 +231,40 @@ func (gs *GeoFenceBoltDB) StubbingQuery(lat, lng float64) *region.Fence {
 	}
 	r := gs.Tree.Query(i)
 
-	var foundRegion *region.Fence
+	var foundFence *region.Fence
 
 	for _, itv := range r {
 		sitv := itv.(*region.S2Interval)
 		if gs.debug {
-			log.Println("found", sitv, sitv.LoopIDs)
+			log.Println("found possible solution", sitv, sitv.LoopIDs)
 		}
 
-		// a region can include a smaller region
+		// a fence can include a smaller fence
 		// return only the one that is contained in the other
 		for _, loopID := range sitv.LoopIDs {
-			region := gs.FenceByID(loopID)
-			if region != nil && region.Loop.ContainsPoint(q.Point()) {
-				if foundRegion == nil {
-					foundRegion = region
+			fence := gs.FenceByID(loopID)
+			if fence != nil && gs.debug {
+				log.Println("testing", q, sitv, sitv.LoopIDs)
+			}
+			if fence != nil && fence.Loop.ContainsPoint(q.Point()) {
+				if foundFence == nil {
+					if gs.debug {
+						log.Println("found matching fence", sitv, sitv.LoopIDs, fence.Loop.NumEdges())
+					}
+					foundFence = fence
 					continue
 				}
-				// we take the 1st vertex of the region.Loop if it is contained in previousLoop
+
+				// we take the 1st vertex of the fence.Loop if it is contained in previousLoop
 				// region loop  is more precise
-				if foundRegion.Loop.ContainsPoint(region.Loop.Vertex(0)) {
-					foundRegion = region
+				if foundFence.Loop.ContainsPoint(fence.Loop.Vertex(0)) {
+					foundFence = fence
 				}
 			}
 		}
 	}
 
-	return foundRegion
+	return foundFence
 }
 
 // RectQuery perform rectangular query ur upper right bl bottom left
