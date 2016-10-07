@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 
 	"github.com/Workiva/go-datastructures/augmentedtree"
 	region "github.com/akhenakh/regionagogo"
@@ -17,8 +18,13 @@ import (
 )
 
 const (
-	loopBucket  = "loop"
-	coverBucket = "cover"
+	loopBucket              = "loop"
+	coverBucket             = "cover"
+	earthCircumferenceMeter = 40075017
+)
+
+var (
+	defaultCoverer = s2.RegionCoverer{MinLevel: 1, MaxLevel: 30, MaxCells: 8}
 )
 
 // GeoFenceBoltDB provides an in memory index and boltdb query engine for fences lookup
@@ -266,7 +272,7 @@ func (gs *GeoFenceBoltDB) StubbingQuery(lat, lng float64) *region.Fence {
 }
 
 // RectQuery perform rectangular query ur upper right bl bottom left
-func (gs *GeoFenceBoltDB) RectQuery(urlat, urlng, bllat, bllng float64, limit int) (region.Fences, error) {
+func (gs *GeoFenceBoltDB) RectQuery(urlat, urlng, bllat, bllng float64) (region.Fences, error) {
 	rect := s2.RectFromLatLng(s2.LatLngFromDegrees(bllat, bllng))
 	rect = rect.AddPoint(s2.LatLngFromDegrees(urlat, urlng))
 
@@ -303,6 +309,43 @@ func (gs *GeoFenceBoltDB) RectQuery(urlat, urlng, bllat, bllng float64, limit in
 		res = append(res, v)
 	}
 	return region.Fences(res), nil
+}
+
+// RadiusQuery is performing a radius query
+func (gs *GeoFenceBoltDB) RadiusQuery(lat, lng, radius float64) (region.Fences, error) {
+	center := s2.PointFromLatLng(s2.LatLngFromDegrees(lat, lng))
+	cap := s2.CapFromCenterArea(center, s2RadialAreaMeters(radius))
+	covering := defaultCoverer.Covering(cap)
+
+	var res []*region.Fence
+
+	fencesIds := make(map[uint64]struct{})
+
+	for _, cellID := range covering {
+		i := &region.S2Interval{CellID: cellID}
+		r := gs.Tree.Query(i)
+
+		for _, itv := range r {
+			sitv := itv.(*region.S2Interval)
+			for _, loopID := range sitv.LoopIDs {
+				fencesIds[loopID] = struct{}{}
+			}
+		}
+	}
+
+	for k := range fencesIds {
+		fence := gs.FenceByID(k)
+		if fence != nil {
+			res = append(res, fence)
+		}
+	}
+
+	return res, nil
+}
+
+func s2RadialAreaMeters(radius float64) float64 {
+	r := (radius / earthCircumferenceMeter) * math.Pi * 2
+	return (math.Pi * r * r)
 }
 
 // StoreFence stores a fence into the database and load its index in memory

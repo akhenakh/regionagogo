@@ -28,7 +28,10 @@ type GeoFenceDB interface {
 	StubbingQuery(lat, lng float64) *Fence
 
 	// RectQuery perform rectangular query ur upper right bl bottom left
-	RectQuery(urlat, urlng, bllat, bllng float64, limit int) (Fences, error)
+	RectQuery(urlat, urlng, bllat, bllng float64) (Fences, error)
+
+	// RadiusQuery is performing a radius query
+	RadiusQuery(lat, lng, radius float64) (Fences, error)
 
 	// Store a Fence into the DB
 	StoreFence(rs *geostore.FenceStorage, cover []uint64) error
