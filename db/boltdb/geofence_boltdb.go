@@ -288,12 +288,13 @@ func (gs *GeoFenceBoltDB) RectQuery(urlat, urlng, bllat, bllng float64, limit in
 				region = v
 			} else {
 				region = gs.FenceByID(loopID)
+				// testing the found loop is actually inside the rect
+				// (since we are using only one large cover it may be outside)
+				if rect.Contains(region.Loop.RectBound()) {
+					fences[loopID] = region
+				}
 			}
-			// testing the found loop is actually inside the rect
-			// (since we are using only one large cover it may be outside)
-			if rect.Contains(region.Loop.RectBound()) {
-				fences[loopID] = region
-			}
+
 		}
 	}
 
