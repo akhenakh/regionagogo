@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"sort"
 
 	"github.com/Workiva/go-datastructures/augmentedtree"
 	region "github.com/akhenakh/regionagogo"
@@ -227,7 +228,7 @@ func (gs *GeoFenceBoltDB) FenceByID(loopID uint64) *region.Fence {
 }
 
 // StubbingQuery returns the fence for the corresponding lat, lng point
-func (gs *GeoFenceBoltDB) StubbingQuery(lat, lng float64) *region.Fence {
+func (gs *GeoFenceBoltDB) StubbingQuery(lat, lng float64, opts ...region.QueryOptionsFunc) (region.Fences, error) {
 	// the CellID at L30
 	q := s2.CellIDFromLatLng(s2.LatLngFromDegrees(lat, lng))
 
@@ -240,17 +241,23 @@ func (gs *GeoFenceBoltDB) StubbingQuery(lat, lng float64) *region.Fence {
 
 	var foundFence *region.Fence
 
+	var queryOpts region.QueryOptions
+	for _, opt := range opts {
+		opt(&queryOpts)
+	}
+
+	var res []*region.Fence
+
 	for _, itv := range r {
 		sitv := itv.(*region.S2Interval)
 		if gs.debug {
 			log.Println("found possible solution", sitv, sitv.LoopIDs)
 		}
 
-		// a fence can include a smaller fence
-		// return only the one that is contained in the other
 		for _, loopID := range sitv.LoopIDs {
 			fence := gs.FenceByID(loopID)
 			if fence != nil && fence.Loop.ContainsPoint(q.Point()) {
+				res = append(res, fence)
 				if foundFence == nil {
 					if gs.debug {
 						log.Println("found matching fence", sitv, sitv.LoopIDs, fence.Loop.NumEdges())
@@ -259,20 +266,33 @@ func (gs *GeoFenceBoltDB) StubbingQuery(lat, lng float64) *region.Fence {
 					continue
 				}
 
-				// we take the 1st vertex of the fence.Loop if it is contained in previousLoop
-				// region loop  is more precise
-				if foundFence.Loop.ContainsPoint(fence.Loop.Vertex(0)) {
-					foundFence = fence
+				// a fence can include a smaller fence
+				// return only the one that is contained in the other if asked
+				if !queryOpts.MultipleFences {
+					// we take the 1st vertex of the fence.Loop if it is contained in previousLoop
+					// region loop  is more precise
+					if foundFence.Loop.ContainsPoint(fence.Loop.Vertex(0)) {
+						foundFence = fence
+					}
 				}
 			}
+
 		}
+
 	}
 
-	return foundFence
+	if !queryOpts.MultipleFences && foundFence != nil {
+		return []*region.Fence{foundFence}, nil
+	}
+
+	// Order fences by their size
+	sort.Sort(sort.Reverse(region.BySize(res)))
+
+	return res, nil
 }
 
 // RectQuery perform rectangular query ur upper right bl bottom left
-func (gs *GeoFenceBoltDB) RectQuery(urlat, urlng, bllat, bllng float64) (region.Fences, error) {
+func (gs *GeoFenceBoltDB) RectQuery(urlat, urlng, bllat, bllng float64, opts ...region.QueryOptionsFunc) (region.Fences, error) {
 	rect := s2.RectFromLatLng(s2.LatLngFromDegrees(bllat, bllng))
 	rect = rect.AddPoint(s2.LatLngFromDegrees(urlat, urlng))
 
@@ -312,7 +332,7 @@ func (gs *GeoFenceBoltDB) RectQuery(urlat, urlng, bllat, bllng float64) (region.
 }
 
 // RadiusQuery is performing a radius query
-func (gs *GeoFenceBoltDB) RadiusQuery(lat, lng, radius float64) (region.Fences, error) {
+func (gs *GeoFenceBoltDB) RadiusQuery(lat, lng, radius float64, opts ...region.QueryOptionsFunc) (region.Fences, error) {
 	center := s2.PointFromLatLng(s2.LatLngFromDegrees(lat, lng))
 	cap := s2.CapFromCenterArea(center, s2RadialAreaMeters(radius))
 	covering := defaultCoverer.Covering(cap)

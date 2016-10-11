@@ -97,8 +97,9 @@ func TestStorage(t *testing.T) {
 	region := gs.FenceByID(1)
 	require.NotNil(t, region)
 
-	region = gs.StubbingQuery(47.01492366313195, -70.842592064976714)
-	require.NotNil(t, region)
+	fences, err := gs.StubbingQuery(47.01492366313195, -70.842592064976714)
+	require.NoError(t, err)
+	require.Len(t, fences, 1)
 }
 
 func BenchmarkCities(tb *testing.B) {
@@ -165,10 +166,11 @@ func TestCities(t *testing.T) {
 
 	for _, city := range cities {
 		t.Log("testing for", city)
-		region := gs.StubbingQuery(city.c[0], city.c[1])
-		require.NotNil(t, region)
-		require.Equal(t, city.code, region.Data["iso_a2"])
-		require.Equal(t, city.name, region.Data["name"])
+		fences, err := gs.StubbingQuery(city.c[0], city.c[1])
+		require.NoError(t, err)
+		require.Len(t, fences, 1)
+		require.Equal(t, city.code, fences[0].Data["iso_a2"])
+		require.Equal(t, city.name, fences[0].Data["name"])
 	}
 }
 
@@ -199,9 +201,10 @@ func TestOverlappingRegion(t *testing.T) {
 	require.NotNil(t, region1)
 	require.True(t, region1.Loop.ContainsPoint(p))
 
-	region := gs.StubbingQuery(48.85206549830757, 2.3064422607421875)
-	require.NotNil(t, region)
-	require.Equal(t, "inner", region.Data["name"])
+	fences, err := gs.StubbingQuery(48.85206549830757, 2.3064422607421875)
+	require.NoError(t, err)
+	require.Len(t, fences, 1)
+	require.Equal(t, "inner", fences[0].Data["name"])
 }
 
 func TestBadCover(t *testing.T) {
@@ -227,7 +230,8 @@ func TestBadCover(t *testing.T) {
 	require.NotNil(t, region2)
 	require.True(t, region2.Loop.ContainsPoint(p))
 
-	region := gs.StubbingQuery(lat, lng)
-	require.NotNil(t, region)
-	require.NotNil(t, region.Data["NAME_5"], region2.Data["NAME_5"])
+	fences, err := gs.StubbingQuery(lat, lng)
+	require.NoError(t, err)
+	require.Len(t, fences, 1)
+	require.NotNil(t, fences[0].Data["NAME_5"], region2.Data["NAME_5"])
 }

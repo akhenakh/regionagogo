@@ -125,3 +125,12 @@ func (f *Fences) ToGeoJSON() *geojson.FeatureCollection {
 
 	return &geo
 }
+
+type BySize []*Fence
+
+func (d BySize) Len() int      { return len(d) }
+func (d BySize) Swap(i, j int) { d[i], d[j] = d[j], d[i] }
+func (d BySize) Less(i, j int) bool {
+	// use approximated area to decide ordering
+	return d[i].Loop.RectBound().Area() < d[j].Loop.RectBound().Area()
+}

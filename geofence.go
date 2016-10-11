@@ -25,19 +25,34 @@ type GeoFenceDB interface {
 	FenceByID(loopID uint64) *Fence
 
 	// returns the fence for the corresponding lat, lng coordinates
-	StubbingQuery(lat, lng float64) *Fence
+	StubbingQuery(lat, lng float64, opts ...QueryOptionsFunc) (Fences, error)
 
 	// RectQuery perform rectangular query ur upper right bl bottom left
-	RectQuery(urlat, urlng, bllat, bllng float64) (Fences, error)
+	RectQuery(urlat, urlng, bllat, bllng float64, opts ...QueryOptionsFunc) (Fences, error)
 
 	// RadiusQuery is performing a radius query
-	RadiusQuery(lat, lng, radius float64) (Fences, error)
+	RadiusQuery(lat, lng, radius float64, opts ...QueryOptionsFunc) (Fences, error)
 
 	// Store a Fence into the DB
 	StoreFence(rs *geostore.FenceStorage, cover []uint64) error
 
 	// Close the DB
 	Close() error
+}
+
+type QueryOptionsFunc func(*QueryOptions)
+
+// queryOptions used to pass options to DB queries
+type QueryOptions struct {
+	// Returns all fences when multiple fences match
+	MultipleFences bool
+}
+
+// WithMultipleFences enable multi fences in responses
+func WithMultipleFences(mf bool) QueryOptionsFunc {
+	return func(o *QueryOptions) {
+		o.MultipleFences = mf
+	}
 }
 
 // ImportGeoJSONFile will load a geo json and save the polygons into

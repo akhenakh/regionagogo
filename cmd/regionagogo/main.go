@@ -32,16 +32,20 @@ func (s *server) queryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	region := s.StubbingQuery(lat, lng)
+	fences, err := s.StubbingQuery(lat, lng)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 
-	if region == nil {
+	if len(fences) < 1 {
 		js, _ := json.Marshal(map[string]string{"name": "unknown"})
 		w.Write(js)
 		return
 	}
 
-	js, _ := json.Marshal(region.Data)
+	js, _ := json.Marshal(fences[0].Data)
 	w.Write(js)
 }
 
