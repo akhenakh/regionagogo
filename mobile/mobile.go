@@ -62,15 +62,15 @@ func (gf *GeoDB) FenceByID(id int) *Fence {
 }
 
 func (gf *GeoDB) QueryHandler(lat, lng float64) *Fence {
-	region := gf.db.StubbingQuery(lat, lng)
-	if region == nil {
+	region, err := gf.db.StubbingQuery(lat, lng)
+	if err != nil || region == nil || len(region) < 1 {
 		return nil
 	}
 
 	js, _ := json.Marshal(region.ToGeoJSON())
 	fm := &Fence{
-		Iso:     region.Data["iso_a2"],
-		Name:    region.Data["name"],
+		Iso:     region[0].Data["iso_a2"],
+		Name:    region[0].Data["name"],
 		GeoJSON: string(js),
 	}
 
