@@ -19,7 +19,7 @@ bin/ragogenfromjson :
 generategeodata : region.db
 
 region.db : bin/ragogenfromjson
-	./bin/ragogenfromjson -filename testdata/world_states_10m.geojson -fields iso_a2,name -dbpath $@ 
+	./bin/ragogenfromjson -filename testdata/world_states_10m.geojson -importFields iso_a2,name -dbpath $@ 
 
 protos :
 	go generate github.com/akhenakh/regionagogo/geostore

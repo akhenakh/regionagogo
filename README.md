@@ -23,7 +23,7 @@ make
 
 To generate the database from GeoJSON use the provided `ragogenfromjson` command, you can specify the fields you want from the GeoJSON properties to be saved into the DB:
 ```
-ragogenfromjson -filename testdata/world_states_10m.geojson -fields iso_a2,name -dbpath ./region.db
+ragogenfromjson -filename testdata/world_states_10m.geojson -importFields iso_a2,name -dbpath ./region.db
 ```
 
 ## Usage

@@ -57,8 +57,9 @@ func WithMultipleFences(mf bool) QueryOptionsFunc {
 
 // ImportGeoJSONFile will load a geo json and save the polygons into
 // the GeoFence for later lookup
-// fields are the properties fields names you want to be associated with each fences
-func ImportGeoJSONFile(gs GeoFenceDB, r io.Reader, fields []string) error {
+// importFields are the properties fields names you want to be associated with each fences
+// forceFields are enforced properties for every entries
+func ImportGeoJSONFile(gs GeoFenceDB, r io.Reader, importFields []string, forceFields map[string]string) error {
 	var geo geojson.FeatureCollection
 
 	d := json.NewDecoder(r)
@@ -78,7 +79,7 @@ func ImportGeoJSONFile(gs GeoFenceDB, r io.Reader, fields []string) error {
 		case "Polygon":
 			mp := geom.(*geojson.Polygon)
 			for _, p := range mp.Coordinates {
-				rc, cu := preparePolygon(f, p, fields)
+				rc, cu := preparePolygon(f, p, importFields, forceFields)
 				if rc != nil {
 					if err := gs.StoreFence(rc, cu); err != nil {
 						return err
@@ -93,7 +94,7 @@ func ImportGeoJSONFile(gs GeoFenceDB, r io.Reader, fields []string) error {
 				// coordinates polygon
 				p := m[0]
 
-				rc, cu := preparePolygon(f, p, fields)
+				rc, cu := preparePolygon(f, p, importFields, forceFields)
 				if rc != nil {
 					if err := gs.StoreFence(rc, cu); err != nil {
 						return err
@@ -112,7 +113,7 @@ func ImportGeoJSONFile(gs GeoFenceDB, r io.Reader, fields []string) error {
 }
 
 // preparePolygon transform a geojson polygons into FenceStorage
-func preparePolygon(f *geojson.Feature, p geojson.Coordinates, fields []string) (*geostore.FenceStorage, []uint64) {
+func preparePolygon(f *geojson.Feature, p geojson.Coordinates, importFields []string, forceFields map[string]string) (*geostore.FenceStorage, []uint64) {
 	if isClockwisePolygon(p) {
 		reversePolygon(p)
 	}
@@ -140,12 +141,16 @@ func preparePolygon(f *geojson.Feature, p geojson.Coordinates, fields []string) 
 	covering := defaultCoverer.Covering(l)
 
 	data := make(map[string]string)
-	for _, field := range fields {
+	for _, field := range importFields {
 		if v, ok := f.Properties[field].(string); !ok {
 			log.Println("can't find field on", f.Properties)
 		} else {
 			data[field] = v
 		}
+	}
+
+	for k, v := range forceFields {
+		data[k] = v
 	}
 
 	cu := make([]uint64, len(covering))
