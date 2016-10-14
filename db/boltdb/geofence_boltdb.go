@@ -209,6 +209,10 @@ func (gs *GeoFenceBoltDB) FenceByID(loopID uint64) *region.Fence {
 		b := tx.Bucket([]byte(loopBucket))
 		v := b.Get(itob(loopID))
 
+		if len(v) == 0 {
+			return nil
+		}
+
 		var frs geostore.FenceStorage
 		err := proto.Unmarshal(v, &frs)
 		if err != nil {

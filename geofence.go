@@ -11,10 +11,6 @@ import (
 	"github.com/kpawlik/geojson"
 )
 
-const (
-	mininumViableLevel = 3 // the minimum cell level we accept
-)
-
 var (
 	defaultCoverer = &s2.RegionCoverer{MinLevel: 1, MaxLevel: 30, MaxCells: 8}
 )
@@ -118,6 +114,7 @@ func preparePolygon(f *geojson.Feature, p geojson.Coordinates, importFields []st
 	if isClockwisePolygon(p) {
 		reversePolygon(p)
 	}
+
 	// polygon
 	// do not add last point in storage (first point is last point)
 	points := make([]s2.Point, len(p)-1)
@@ -134,7 +131,7 @@ func preparePolygon(f *geojson.Feature, p geojson.Coordinates, importFields []st
 	// TODO: parallelized region cover
 	l := LoopFenceFromPoints(points)
 
-	if l.IsEmpty() || l.IsFull() {
+	if l.IsEmpty() || l.IsFull() || l.ContainsOrigin() {
 		log.Println("invalid loop", f.Properties)
 		return nil, nil
 	}
