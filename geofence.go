@@ -157,12 +157,6 @@ func preparePolygon(f *geojson.Feature, p geojson.Coordinates, importFields []st
 	var invalidLoop bool
 
 	for i, v := range covering {
-		// added a security there if the level is too high it probably means the polygon is bogus
-		// this to avoid a large cell to cover everything
-		if v.Level() < mininumViableLevel {
-			log.Print("cell level too big", v.Level(), data)
-			invalidLoop = true
-		}
 		cu[i] = uint64(v)
 	}
 
