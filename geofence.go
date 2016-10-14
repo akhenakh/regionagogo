@@ -59,7 +59,8 @@ func WithMultipleFences(mf bool) QueryOptionsFunc {
 // the GeoFence for later lookup
 // importFields are the properties fields names you want to be associated with each fences
 // forceFields are enforced properties for every entries
-func ImportGeoJSONFile(gs GeoFenceDB, r io.Reader, importFields []string, forceFields map[string]string) error {
+// renameFields rename a properties for every entries
+func ImportGeoJSONFile(gs GeoFenceDB, r io.Reader, importFields []string, forceFields map[string]string, renameFields map[string]string) error {
 	var geo geojson.FeatureCollection
 
 	d := json.NewDecoder(r)
@@ -79,7 +80,7 @@ func ImportGeoJSONFile(gs GeoFenceDB, r io.Reader, importFields []string, forceF
 		case "Polygon":
 			mp := geom.(*geojson.Polygon)
 			for _, p := range mp.Coordinates {
-				rc, cu := preparePolygon(f, p, importFields, forceFields)
+				rc, cu := preparePolygon(f, p, importFields, forceFields, renameFields)
 				if rc != nil {
 					if err := gs.StoreFence(rc, cu); err != nil {
 						return err
@@ -94,7 +95,7 @@ func ImportGeoJSONFile(gs GeoFenceDB, r io.Reader, importFields []string, forceF
 				// coordinates polygon
 				p := m[0]
 
-				rc, cu := preparePolygon(f, p, importFields, forceFields)
+				rc, cu := preparePolygon(f, p, importFields, forceFields, renameFields)
 				if rc != nil {
 					if err := gs.StoreFence(rc, cu); err != nil {
 						return err
@@ -113,7 +114,7 @@ func ImportGeoJSONFile(gs GeoFenceDB, r io.Reader, importFields []string, forceF
 }
 
 // preparePolygon transform a geojson polygons into FenceStorage
-func preparePolygon(f *geojson.Feature, p geojson.Coordinates, importFields []string, forceFields map[string]string) (*geostore.FenceStorage, []uint64) {
+func preparePolygon(f *geojson.Feature, p geojson.Coordinates, importFields []string, forceFields map[string]string, renameFields map[string]string) (*geostore.FenceStorage, []uint64) {
 	if isClockwisePolygon(p) {
 		reversePolygon(p)
 	}
@@ -145,7 +146,11 @@ func preparePolygon(f *geojson.Feature, p geojson.Coordinates, importFields []st
 		if v, ok := f.Properties[field].(string); !ok {
 			log.Println("can't find field on", f.Properties)
 		} else {
-			data[field] = v
+			if renamedKey, ok := renameFields[field]; ok {
+				data[renamedKey] = v
+			} else {
+				data[field] = v
+			}
 		}
 	}
 

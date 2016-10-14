@@ -38,8 +38,12 @@ func main() {
 	flag.Var(&importFields, "importFields", "List of fields to fetch inside GeoJSON properties")
 
 	// add a property to each entries imported
-	var forceField fieldFlag
-	flag.Var(&forceField, "forceFields", "List of fields to enforce as a property, eg level=country")
+	var forceFields fieldFlag
+	flag.Var(&forceFields, "forceFields", "List of fields to enforce as a property, eg level=country")
+
+	// rename a field on the fly
+	var renameFields fieldFlag
+	flag.Var(&renameFields, "renameFields", "List of fields to be renamed on the fly as a property, eg NAME_EN=name\n\tnote NAME_EN needs to be in importFields even if it will be renamed")
 
 	filename := flag.String("filename", "", "A geojson file")
 	dbpath := flag.String("dbpath", "", "Database path")
@@ -58,9 +62,9 @@ func main() {
 
 	forceFieldsMap := make(map[string]string)
 
-	if len(forceField.Fields) > 0 {
+	if len(forceFields.Fields) > 0 {
 		// check the syntax
-		for _, field := range forceField.Fields {
+		for _, field := range forceFields.Fields {
 			if len(strings.Split(field, "=")) != 2 {
 				fmt.Println("Invalid forceField", field)
 				flag.PrintDefaults()
@@ -68,6 +72,21 @@ func main() {
 			}
 			split := strings.Split(field, "=")
 			forceFieldsMap[split[0]] = split[1]
+		}
+	}
+
+	renameFieldsMap := make(map[string]string)
+
+	if len(renameFields.Fields) > 0 {
+		// check the syntax
+		for _, field := range renameFields.Fields {
+			if len(strings.Split(field, "=")) != 2 {
+				fmt.Println("Invalid forceField", field)
+				flag.PrintDefaults()
+				os.Exit(2)
+			}
+			split := strings.Split(field, "=")
+			renameFieldsMap[split[0]] = split[1]
 		}
 	}
 
@@ -85,7 +104,7 @@ func main() {
 	}
 	r := bufio.NewReader(fi)
 
-	err = regionagogo.ImportGeoJSONFile(gs, r, importFields.Fields, forceFieldsMap)
+	err = regionagogo.ImportGeoJSONFile(gs, r, importFields.Fields, forceFieldsMap, renameFieldsMap)
 	if err != nil {
 		log.Fatal(err)
 	}
