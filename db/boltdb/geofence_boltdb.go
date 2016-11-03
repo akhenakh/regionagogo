@@ -34,6 +34,7 @@ type GeoFenceBoltDB struct {
 	*bolt.DB
 	cache *lru.Cache
 	debug bool
+	ro    bool
 }
 
 // GeoSearchOption used to pass options to NewGeoSearch
@@ -66,7 +67,7 @@ func WithReadOnly(ro bool) GeoFenceBoltDBOption {
 	}
 }
 
-// NewGeoFenceBoltDB creates a new geo database, needs a writable path for BoltDB
+// NewGeoFenceBoltDB creates or reopen a bolt geo database
 func NewGeoFenceBoltDB(dbpath string, opts ...GeoFenceBoltDBOption) (*GeoFenceBoltDB, error) {
 	var geoOpts geoFenceBoltDBOptions
 
@@ -77,6 +78,17 @@ func NewGeoFenceBoltDB(dbpath string, opts ...GeoFenceBoltDBOption) (*GeoFenceBo
 	db, err := bolt.Open(dbpath, 0600, &bolt.Options{ReadOnly: geoOpts.ro})
 	if err != nil {
 		return nil, err
+	}
+
+	return NewGeoFenceIdx(db, opts...)
+}
+
+// NewGeoFenceIdx a geo index over a BoltDB storage
+func NewGeoFenceIdx(db *bolt.DB, opts ...GeoFenceBoltDBOption) (*GeoFenceBoltDB, error) {
+	var geoOpts geoFenceBoltDBOptions
+
+	for _, opt := range opts {
+		opt(&geoOpts)
 	}
 
 	// create bucket if we have write permission
@@ -98,6 +110,7 @@ func NewGeoFenceBoltDB(dbpath string, opts ...GeoFenceBoltDBOption) (*GeoFenceBo
 		Tree:  augmentedtree.New(1),
 		DB:    db,
 		debug: geoOpts.debug,
+		ro:    geoOpts.ro,
 	}
 
 	if geoOpts.maxCachedEntries != 0 {
@@ -374,6 +387,9 @@ func s2RadialAreaMeters(radius float64) float64 {
 
 // StoreFence stores a fence into the database and load its index in memory
 func (gs *GeoFenceBoltDB) StoreFence(fs *geostore.FenceStorage, cover []uint64) error {
+	if gs.ro {
+		return errors.New("db is in read only mode")
+	}
 	return gs.Update(func(tx *bolt.Tx) error {
 		loopB := tx.Bucket([]byte(loopBucket))
 		coverBucket := tx.Bucket([]byte(coverBucket))
