@@ -32,9 +32,11 @@ var (
 type GeoFenceBoltDB struct {
 	augmentedtree.Tree
 	*bolt.DB
-	cache *lru.Cache
-	debug bool
-	ro    bool
+	cache       *lru.Cache
+	loopBucket  []byte
+	coverBucket []byte
+	debug       bool
+	ro          bool
 }
 
 // GeoSearchOption used to pass options to NewGeoSearch
@@ -43,7 +45,23 @@ type GeoFenceBoltDBOption func(*geoFenceBoltDBOptions)
 type geoFenceBoltDBOptions struct {
 	maxCachedEntries uint
 	debug            bool
+	loopBucket       []byte
+	coverBucket      []byte
 	ro               bool
+}
+
+// WithLoopBucket set the loop bucket name
+func WithLoopBucket(loopBucket string) GeoFenceBoltDBOption {
+	return func(o *geoFenceBoltDBOptions) {
+		o.loopBucket = []byte(loopBucket)
+	}
+}
+
+// WithCoverBucket set the cover bucket name
+func WithCoverBucket(coverBucket string) GeoFenceBoltDBOption {
+	return func(o *geoFenceBoltDBOptions) {
+		o.coverBucket = []byte(coverBucket)
+	}
 }
 
 // WithCachedEntries enable an LRU cache default is disabled
@@ -107,10 +125,12 @@ func NewGeoFenceIdx(db *bolt.DB, opts ...GeoFenceBoltDBOption) (*GeoFenceBoltDB,
 	}
 
 	gs := &GeoFenceBoltDB{
-		Tree:  augmentedtree.New(1),
-		DB:    db,
-		debug: geoOpts.debug,
-		ro:    geoOpts.ro,
+		Tree:        augmentedtree.New(1),
+		DB:          db,
+		debug:       geoOpts.debug,
+		ro:          geoOpts.ro,
+		loopBucket:  geoOpts.loopBucket,
+		coverBucket: geoOpts.coverBucket,
 	}
 
 	if geoOpts.maxCachedEntries != 0 {
@@ -119,6 +139,14 @@ func NewGeoFenceIdx(db *bolt.DB, opts ...GeoFenceBoltDBOption) (*GeoFenceBoltDB,
 			return nil, err
 		}
 		gs.cache = cache
+	}
+
+	if len(gs.loopBucket) == 0 {
+		gs.loopBucket = []byte(loopBucket)
+	}
+
+	if len(gs.coverBucket) == 0 {
+		gs.coverBucket = []byte(coverBucket)
 	}
 
 	if err := gs.importGeoData(); err != nil {
