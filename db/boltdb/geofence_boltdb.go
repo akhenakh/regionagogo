@@ -19,8 +19,8 @@ import (
 )
 
 const (
-	loopBucket              = "loop"
-	coverBucket             = "cover"
+	defaultLoopBucket       = "loop"
+	defaultCoverBucket      = "cover"
 	earthCircumferenceMeter = 40075017
 )
 
@@ -109,21 +109,6 @@ func NewGeoFenceIdx(db *bolt.DB, opts ...GeoFenceBoltDBOption) (*GeoFenceBoltDB,
 		opt(&geoOpts)
 	}
 
-	// create bucket if we have write permission
-	if !geoOpts.ro {
-		if errdb := db.Update(func(tx *bolt.Tx) error {
-			if _, errtx := tx.CreateBucketIfNotExists([]byte(loopBucket)); errtx != nil {
-				return fmt.Errorf("create bucket: %s", errtx)
-			}
-			if _, errtx := tx.CreateBucketIfNotExists([]byte(coverBucket)); errtx != nil {
-				return fmt.Errorf("create bucket: %s", errtx)
-			}
-			return nil
-		}); errdb != nil {
-			return nil, errdb
-		}
-	}
-
 	gs := &GeoFenceBoltDB{
 		Tree:        augmentedtree.New(1),
 		DB:          db,
@@ -142,11 +127,26 @@ func NewGeoFenceIdx(db *bolt.DB, opts ...GeoFenceBoltDBOption) (*GeoFenceBoltDB,
 	}
 
 	if len(gs.loopBucket) == 0 {
-		gs.loopBucket = []byte(loopBucket)
+		gs.loopBucket = []byte(defaultLoopBucket)
 	}
 
 	if len(gs.coverBucket) == 0 {
-		gs.coverBucket = []byte(coverBucket)
+		gs.coverBucket = []byte(defaultCoverBucket)
+	}
+
+	// create bucket if we have write permission
+	if !geoOpts.ro {
+		if errdb := db.Update(func(tx *bolt.Tx) error {
+			if _, errtx := tx.CreateBucketIfNotExists(gs.loopBucket); errtx != nil {
+				return fmt.Errorf("create bucket: %s", errtx)
+			}
+			if _, errtx := tx.CreateBucketIfNotExists(gs.coverBucket); errtx != nil {
+				return fmt.Errorf("create bucket: %s", errtx)
+			}
+			return nil
+		}); errdb != nil {
+			return nil, errdb
+		}
 	}
 
 	if err := gs.importGeoData(); err != nil {
@@ -195,7 +195,7 @@ func (gs *GeoFenceBoltDB) index(fc *geostore.FenceCover, loopID uint64) {
 func (gs *GeoFenceBoltDB) importGeoData() error {
 	var count int
 	err := gs.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(coverBucket))
+		b := tx.Bucket(gs.coverBucket)
 		cur := b.Cursor()
 
 		// load the cell ranges into the tree
@@ -247,7 +247,7 @@ func (gs *GeoFenceBoltDB) FenceByID(loopID uint64) *region.Fence {
 	}
 	var rs *geostore.FenceStorage
 	err := gs.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(loopBucket))
+		b := tx.Bucket(gs.loopBucket)
 		v := b.Get(itob(loopID))
 
 		if len(v) == 0 {
@@ -419,8 +419,8 @@ func (gs *GeoFenceBoltDB) StoreFence(fs *geostore.FenceStorage, cover []uint64) 
 		return errors.New("db is in read only mode")
 	}
 	return gs.Update(func(tx *bolt.Tx) error {
-		loopB := tx.Bucket([]byte(loopBucket))
-		coverBucket := tx.Bucket([]byte(coverBucket))
+		loopB := tx.Bucket(gs.loopBucket)
+		coverBucket := tx.Bucket(gs.coverBucket)
 
 		loopID, err := loopB.NextSequence()
 		if err != nil {
