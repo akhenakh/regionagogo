@@ -341,31 +341,32 @@ func (gs *GeoFenceBoltDB) RectQuery(urlat, urlng, bllat, bllng float64, opts ...
 	rect := s2.RectFromLatLng(s2.LatLngFromDegrees(bllat, bllng))
 	rect = rect.AddPoint(s2.LatLngFromDegrees(urlat, urlng))
 
-	rc := &s2.RegionCoverer{MaxLevel: 30, MaxCells: 1}
+	rc := &s2.RegionCoverer{MaxLevel: 30, MaxCells: 4}
 	covering := rc.Covering(rect)
-	if len(covering) != 1 {
+	if len(covering) == 0 {
 		return nil, errors.New("impossible covering")
 	}
-	i := &region.S2Interval{CellID: covering[0]}
-	r := gs.Tree.Query(i)
 
 	fences := make(map[uint64]*region.Fence)
+	for _, c := range covering {
+		i := &region.S2Interval{CellID: c}
+		r := gs.Tree.Query(i)
 
-	for _, itv := range r {
-		sitv := itv.(*region.S2Interval)
-		for _, loopID := range sitv.LoopIDs {
-			var region *region.Fence
-			if v, ok := fences[loopID]; ok {
-				region = v
-			} else {
-				region = gs.FenceByID(loopID)
-				// testing the found loop is actually inside the rect
-				// (since we are using only one large cover it may be outside)
-				if rect.Contains(region.Loop.RectBound()) {
-					fences[loopID] = region
+		for _, itv := range r {
+			sitv := itv.(*region.S2Interval)
+			for _, loopID := range sitv.LoopIDs {
+				var region *region.Fence
+				if v, ok := fences[loopID]; ok {
+					region = v
+				} else {
+					region = gs.FenceByID(loopID)
+					// testing the found loop is actually inside the rect
+					// (since we are using only one large cover it may be outside)
+					if rect.Contains(region.Loop.RectBound()) {
+						fences[loopID] = region
+					}
 				}
 			}
-
 		}
 	}
 
