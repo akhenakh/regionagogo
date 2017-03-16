@@ -50,5 +50,6 @@ r := gs.StabbingQuery(msg.Latitude, msg.Longitude)
 ```
 
 ## TODO
+- create a struct for data import, change the default coverer ...
 - move the cache outside of boltdb storage to make it generic 
 - implement an in memory storage

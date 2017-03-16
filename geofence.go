@@ -58,13 +58,16 @@ func WithMultipleFences(mf bool) QueryOptionsFunc {
 // renameFields rename a properties for every entries
 func ImportGeoJSONFile(gs GeoFenceDB, r io.Reader, importFields []string, forceFields map[string]string, renameFields map[string]string) error {
 	var geo geojson.FeatureCollection
-
 	d := json.NewDecoder(r)
 	if err := d.Decode(&geo); err != nil {
 		return err
 	}
 
 	var count int
+
+	if len(geo.Features) == 0 {
+		log.Println("warning the decoded GeoJSON does not contains any features")
+	}
 
 	for _, f := range geo.Features {
 		geom, err := f.GetGeometry()

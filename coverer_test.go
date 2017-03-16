@@ -6,6 +6,46 @@ import (
 	"github.com/golang/geo/s2"
 )
 
+func Test3PLoop(t *testing.T) {
+	s2pts := make([]s2.Point, 3)
+	s2pts[0] = s2.PointFromLatLng(s2.LatLngFromDegrees(53.51249996891279, -113.53350000023157))
+	s2pts[1] = s2.PointFromLatLng(s2.LatLngFromDegrees(53.56133333693556, -113.5860000459106))
+	s2pts[2] = s2.PointFromLatLng(s2.LatLngFromDegrees(53.5543333277993, -113.4728333483211))
+
+	l := LoopFenceFromPoints(s2pts)
+	t.Log(l)
+	rc := &s2.RegionCoverer{MinLevel: 1, MaxLevel: 30, MaxCells: 32}
+	if s2.RobustSign(s2pts[0], s2pts[1], s2pts[2]) == s2.Clockwise {
+		t.Log("NOT CCW")
+		s2pts[0], s2pts[1] = s2pts[1], s2pts[0]
+	}
+	l = LoopFenceFromPoints(s2pts)
+	t.Log(l)
+	covering := rc.Covering(l)
+	t.Log(covering)
+}
+
+func Test4PLoop(t *testing.T) {
+	//[47.61649997100236 -122.20166669972009] [47.63100000228975 -122.18449997736279] [47.64100002912518 -122.1180000087143] [47.629666669247634 -122.03883334651307]
+	s2pts := make([]s2.Point, 4)
+	s2pts[0] = s2.PointFromLatLng(s2.LatLngFromDegrees(47.61649997100236, -122.20166669972009))
+	s2pts[1] = s2.PointFromLatLng(s2.LatLngFromDegrees(47.63100000228975, -122.18449997736279))
+	s2pts[2] = s2.PointFromLatLng(s2.LatLngFromDegrees(47.64100002912518, -122.1180000087143))
+	s2pts[3] = s2.PointFromLatLng(s2.LatLngFromDegrees(47.629666669247634, -122.03883334651307))
+	l := LoopFenceFromPoints(s2pts)
+	t.Log(l)
+	rc := &s2.RegionCoverer{MinLevel: 1, MaxLevel: 30, MaxCells: 32}
+	if s2.RobustSign(s2pts[0], s2pts[1], s2pts[2]) == s2.Clockwise {
+		t.Log("NOT CCW")
+		s2pts[0], s2pts[1] = s2pts[1], s2pts[0]
+	}
+	l = LoopFenceFromPoints(s2pts)
+	t.Log(l)
+	covering := rc.Covering(l)
+	t.Log(covering)
+
+}
+
 func TestCoverIsNotRectBases(t *testing.T) {
 	points := []s2.Point{
 		s2.PointFromLatLng(s2.LatLng{Lat: 48.7195648396, Lng: 2.3574256897}),
