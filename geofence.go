@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	defaultCoverer = &s2.RegionCoverer{MinLevel: 1, MaxLevel: 30, MaxCells: 8}
+	defaultCoverer = &s2.RegionCoverer{MinLevel: 1, MaxLevel: 24, MaxCells: 32}
 )
 
 // GeoFenceDB is the main interface to store and query your geo database
