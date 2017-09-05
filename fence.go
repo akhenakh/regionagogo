@@ -31,9 +31,9 @@ func NewFenceFromStorage(rs *geostore.FenceStorage) *Fence {
 		points[i] = point
 	}
 
-	l := LoopFenceFromPoints(points)
+	l := s2.LoopFromPoints(points)
 
-	return &Fence{Data: rs.Data, Loop: l.Loop}
+	return &Fence{Data: rs.Data, Loop: l}
 }
 
 // ToGeoJSON transforms a Region to a valid GeoJSON

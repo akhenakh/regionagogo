@@ -92,7 +92,8 @@ func TestStorage(t *testing.T) {
 
 	r := strings.NewReader(geoJSONIsland)
 
-	err = regionagogo.ImportGeoJSONFile(gs, r, []string{"name"}, nil, nil)
+	i := regionagogo.NewGeoJSONImport(gs, r, []string{"name"}, nil, nil)
+	err = i.Start()
 	require.NoError(t, err)
 
 	region := gs.FenceByID(1)
@@ -116,7 +117,8 @@ func BenchmarkCities(tb *testing.B) {
 	gs, err := NewGeoFenceBoltDB(tmpfile)
 	defer gs.Close()
 
-	err = regionagogo.ImportGeoJSONFile(gs, r, []string{"iso_a2", "name"}, nil, nil)
+	i := regionagogo.NewGeoJSONImport(gs, r, []string{"iso_a2", "name"}, nil, nil)
+	err = i.Start()
 	require.NoError(tb, err)
 
 	for i := 0; i < tb.N; i++ {
@@ -138,7 +140,8 @@ func TestCCW(t *testing.T) {
 	gs, err := NewGeoFenceBoltDB(tmpfile)
 	defer gs.Close()
 
-	err = regionagogo.ImportGeoJSONFile(gs, r, []string{"iso_a2", "name"}, nil, nil)
+	i := regionagogo.NewGeoJSONImport(gs, r, []string{"iso_a2", "name"}, nil, nil)
+	err = i.Start()
 	require.NoError(t, err)
 
 	err = fi.Close()
@@ -162,7 +165,8 @@ func TestCities(t *testing.T) {
 	gs, err := NewGeoFenceBoltDB(tmpfile)
 	defer gs.Close()
 
-	err = regionagogo.ImportGeoJSONFile(gs, r, []string{"iso_a2", "name"}, nil, nil)
+	i := regionagogo.NewGeoJSONImport(gs, r, []string{"iso_a2", "name"}, nil, nil)
+	err = i.Start()
 	require.NoError(t, err)
 
 	for _, city := range cities {
@@ -186,7 +190,8 @@ func TestOverlappingRegion(t *testing.T) {
 
 	r := strings.NewReader(geoJSONoverlapping)
 
-	err = regionagogo.ImportGeoJSONFile(gs, r, []string{"name"}, nil, nil)
+	i := regionagogo.NewGeoJSONImport(gs, r, []string{"name"}, nil, nil)
+	err = i.Start()
 	require.NoError(t, err)
 
 	// this point is inside both Polygons should return the smaller
@@ -219,7 +224,8 @@ func TestBadCover(t *testing.T) {
 
 	r := strings.NewReader(geoJSONbadcover)
 
-	err = regionagogo.ImportGeoJSONFile(gs, r, []string{"NAME_5"}, nil, nil)
+	i := regionagogo.NewGeoJSONImport(gs, r, []string{"NAME_5"}, nil, nil)
+	err = i.Start()
 	require.NoError(t, err)
 
 	// this point is inside geoJSONbadcover but was failing the test
@@ -248,7 +254,8 @@ func TestBogusLoop(t *testing.T) {
 
 	r := strings.NewReader(geoJSONbogusLoop)
 
-	err = regionagogo.ImportGeoJSONFile(gs, r, []string{"name"}, nil, nil)
+	i := regionagogo.NewGeoJSONImport(gs, r, []string{"name"}, nil, nil)
+	err = i.Start()
 	require.NoError(t, err)
 
 	region1 := gs.FenceByID(0)

@@ -7,10 +7,9 @@ It uses S2 and a segment tree to create a fast geo shape database, details of im
 It can also be used directly from docker `docker run -P akhenakh/regionagogo`
 
 ## Data
-You can use any geo data but the provided GeoJSON comes from [Natural Earth Data](http://www.naturalearthdata.com/).
-Some regions are not precise enough and some accentuated names are wrong, if you are aware of a better source please tell me.
+You can use any geo data but the provided GeoJSON comes from [who's on first](https://whosonfirst.mapzen.com).
 
-It works too with the better [Gadm Data](http://gadm.org/version2) but the data are not free for commercial use.    
+It works too with [Gadm Data](http://gadm.org/version2) but the data are not free for commercial use.    
 
 Regionagogo is using a BoltDB datafile to store the fences and a small segment tree as index lives in memory.  
 
@@ -23,7 +22,7 @@ make
 
 To generate the database from GeoJSON use the provided `ragogenfromjson` command, you can specify the fields you want from the GeoJSON properties to be saved into the DB:
 ```
-ragogenfromjson -filename testdata/world_states_10m.geojson -importFields iso_a2,name -dbpath ./region.db
+ragogenfromjson -filename testdata/world_region.geojson -importFields iso -dbpath ./region.db
 ```
 
 ## Usage

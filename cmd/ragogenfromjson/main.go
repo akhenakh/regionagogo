@@ -48,6 +48,7 @@ func main() {
 	filename := flag.String("filename", "", "A geojson file")
 	dbpath := flag.String("dbpath", "", "Database path")
 	debug := flag.Bool("debug", false, "Enable debug")
+	featureImport := flag.Bool("featureImport", false, "the GeoJSON is a feature not a featureCollection")
 
 	flag.Parse()
 
@@ -104,8 +105,9 @@ func main() {
 	}
 	r := bufio.NewReader(fi)
 
-	err = regionagogo.ImportGeoJSONFile(gs, r, importFields.Fields, forceFieldsMap, renameFieldsMap)
-	if err != nil {
+	i := regionagogo.NewGeoJSONImport(gs, r, importFields.Fields, forceFieldsMap, renameFieldsMap)
+	i.FeatureImport = *featureImport
+	if err := i.Start(); err != nil {
 		log.Fatal(err)
 	}
 
