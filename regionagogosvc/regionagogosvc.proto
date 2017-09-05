@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package regionagogosvc;
+
+// Interface exported by the server.
+service RegionAGogo {
+  // Obtains the region at a given position.
+  rpc GetRegion(Point) returns (RegionResponse) {}
+}
+
+message Point {
+  float latitude = 1;
+  float longitude = 2;
+}
+
+message RegionResponse {
+  string code = 1;
+}

@@ -23,6 +23,7 @@ region.db : bin/ragogenfromjson
 
 protos :
 	go generate github.com/akhenakh/regionagogo/geostore
+	go generate github.com/akhenakh/regionagogo/regionagogosvc
 
 clean :
 	rm -f region.db

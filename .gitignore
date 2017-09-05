@@ -35,3 +35,7 @@ cmd/reagionagogo/regionagogo
 cmd/ragogenfromjson/ragogenfromjson
 reagionagogo.linux
 /cmd/regionagogo/regionagogo
+
+cmd/regionagogoclient/regionagogoclient
+
+\.idea/

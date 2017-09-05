@@ -1,18 +1,41 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"log"
+	"net"
 	"net/http"
 	"strconv"
 
 	"github.com/akhenakh/regionagogo"
 	"github.com/akhenakh/regionagogo/db/boltdb"
+	pb "github.com/akhenakh/regionagogo/regionagogosvc"
+	"google.golang.org/grpc"
 )
 
 type server struct {
 	regionagogo.GeoFenceDB
+}
+
+func (s *server) GetRegion(ctx context.Context, p *pb.Point) (*pb.RegionResponse, error) {
+	region, err := s.StubbingQuery(float64(p.Latitude), float64(p.Longitude))
+	if err != nil {
+		return nil, err
+	}
+	if region == nil || len(region) == 0 {
+		return &pb.RegionResponse{Code: "unknown"}, nil
+	}
+
+	// default is to lookup for "iso"
+	iso, ok := region[0].Data["iso"]
+	if !ok {
+		return &pb.RegionResponse{Code: "unknown"}, nil
+	}
+
+	rs := pb.RegionResponse{Code: iso}
+	return &rs, nil
 }
 
 // queryHandler takes a lat & lng query params and return a JSON
@@ -68,5 +91,17 @@ func main() {
 
 	s := &server{GeoFenceDB: gs}
 	http.HandleFunc("/query", s.queryHandler)
-	log.Println(http.ListenAndServe(":8082", nil))
+	go func() {
+		log.Println(http.ListenAndServe(":8082", nil))
+	}()
+
+	lis, err := net.Listen("tcp", ":8083")
+
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+
+	grpcServer := grpc.NewServer()
+	pb.RegisterRegionAGogoServer(grpcServer, s)
+	grpcServer.Serve(lis)
 }
