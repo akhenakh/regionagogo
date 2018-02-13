@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -77,6 +78,8 @@ func main() {
 
 	dbpath := flag.String("dbpath", "", "Database path")
 	debug := flag.Bool("debug", false, "Enable debug")
+	httpPort := flag.Int("httpPort", 8082, "http debug port to listen on")
+	grpcPort := flag.Int("grpcPort", 8083, "grpc port to listen on")
 	cachedEntries := flag.Uint("cachedEntries", 0, "Region Cache size, 0 for disabled")
 
 	flag.Parse()
@@ -92,10 +95,10 @@ func main() {
 	s := &server{GeoFenceDB: gs}
 	http.HandleFunc("/query", s.queryHandler)
 	go func() {
-		log.Println(http.ListenAndServe(":8082", nil))
+		log.Println(http.ListenAndServe(fmt.Sprintf(":%d", *httpPort), nil))
 	}()
 
-	lis, err := net.Listen("tcp", ":8083")
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *grpcPort))
 
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
